@@ -1,5 +1,8 @@
 # Vocabulary Adaptation MPT and BLOOM model
 <br>
+### Result 
+1. Please find result on https://docs.google.com/spreadsheets/d/1npkCffkNyztbPZokK9vis19zvzzT07l-uWnN06aiOeQ/edit#gid=868636088
+2. Please find Meeting Notes/To-Do list/observation/.. on - https://docs.google.com/document/d/1dOegfXg8v5NBYXlCZgLDnkLBjP1YD_6K47kHh_5ojd0/edit
 
 ### File specification
 1. seed_data_test_split.py contains code to split seed dataset for train(90%) and test(10%)
