@@ -8,7 +8,9 @@
 <br>
 4. combine_tokenizer.py -> contains code to combine two tokenizer (The one used for extended version)
 <br>
-5. MPT_inference.py and IndicMPT_inference.py -> code to calculate the perplexity score of just inferncing(no training)
+5. train_tokenizer.py -> train tokenizer from scratch
 <br>
-6. MPT_train.py and IndicMPT_train.py -> contains code to train LoRA adapetr and Word Embedding layer of model
+6. MPT_inference.py and IndicMPT_inference.py -> code to calculate the perplexity score of just inferncing(no training)
+<br>
+7. MPT_train.py and IndicMPT_train.py -> contains code to train LoRA adapetr and Word Embedding layer of model
 <br>
