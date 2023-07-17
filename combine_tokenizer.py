@@ -4,7 +4,8 @@ import torch
 import json
 
 source_tokenizer = AutoTokenizer.from_pretrained("./tokenizer_mpt_7b_model/")
-target_tokenizer = AutoTokenizer.from_pretrained("indic_tokenizer/indiMPT_tokenizer_64k")
+target_tokenizer = AutoTokenizer.from_pretrained("indic_tokenizer/indiMPT_tokenizer_64k") 
+#here target tokenizer is the vocab of what we are extending to the base toeknizer
 
 source_vocab = source_tokenizer.vocab
 target_vocab = target_tokenizer.vocab
