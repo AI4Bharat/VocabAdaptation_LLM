@@ -1,11 +1,9 @@
 # Vocabulary Adaptation MPT and BLOOM model
 <br>
 
-# File specification
+## File specification
 1. seed_data_test_split.py contains code to split seed dataset for train(90%) and test(10%)
-<br>
 2. merge_training_seed.py -> code to merge the training data
-<br>
 3. tokenizer_specification.py -> code to find how two tokenizer are related, such as intersecting token, or avg tokenization length per sentence
 <br>
 4. combine_tokenizer.py -> contains code to combine two tokenizer (The one used for extended version)
