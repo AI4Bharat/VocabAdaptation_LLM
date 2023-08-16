@@ -18,6 +18,7 @@ for folder in os.listdir("/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/BP
             file_metric.write("\n")
             file_metric.write(decoded_text)
             file_metric.write("\n")
+            # print(f"Tokenized :{tokenizer.tokenize(lines)}")   #to check the resulting token, generated tokens are mostly character level
             
             cnt += 1
             if cnt == 10:
