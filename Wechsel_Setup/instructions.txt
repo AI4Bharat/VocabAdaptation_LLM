@@ -1,0 +1,11 @@
+1. run tokenize_data_for_fasttext.py to create input file for fasttext model
+2. run run_fasttext.sh to train fasttext model
+
+To create billingual-dictionary
+a. cd fast_align
+b. run create_input_data.py to create input to the fast align model
+c. run run_fasttext.sh to create mapping of word
+d. 
+e. cd ..
+
+3. Run wechsel_run.py to get embedding using wechsel initialization
