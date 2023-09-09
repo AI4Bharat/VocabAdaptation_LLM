@@ -1,0 +1,2 @@
+1. run check_en_tokenization.py to check that the the tokens after tokenization of english sentence using llama tokenizer and en-indic llama tokenizer(our final tokenizer) is almost same
+2. run tokenizer_specification_word_level.py to check the fertility score at word level of tokenizer
