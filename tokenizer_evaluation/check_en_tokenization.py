@@ -30,37 +30,38 @@ text_path = f"/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/seed_train_tes
 cnt = 0
 total_cnt = 0
 with open(text_path,'r', encoding='utf-8' ) as file:
-        data = file.readlines()
-        if args.evaluation_type == "word":
-            word_set = set()
-            for line in data:
-                words = line.split()
-                word_set.update(words)
+    data = file.readlines()
+    if args.evaluation_type == "word":
+        word_set = set()
+        for line in data:
+            words = line.split()
+            word_set.update(words)
+        
+        for w in word_set:
+            total_cnt += 1
+            llama_tok_res = llama_tokenizer.tokenize(w)
+            indicllama_tok_res = indic_llama_tokenizer.tokenize(w)
             
-            for w in word_set:
-                total_cnt += 1
-                llama_tok_res = llama_tokenizer.tokenize(w)
-                indicllama_tok_res = indic_llama_tokenizer.tokenize(w)
-                
-                if indicllama_tok_res == llama_tok_res :
-                    cnt +=1
-                else:
-                    print("Test text:\n",w)
-                    # print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
-                    # print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
+            if indicllama_tok_res == llama_tok_res :
+                cnt +=1
+            else:
+                print("Test text:\n",w)
+                # print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
+                # print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
+        
+    if args.evaluation_type == "sentence":
+        print("in sentece")  
+        for text in data:
+            total_cnt += 1
+            llama_tok_res = llama_tokenizer.tokenize(text)
+            indicllama_tok_res = indic_llama_tokenizer.tokenize(text)
             
-            if args.evaluation_type == "sentence":     
-                for text in data:
-                    total_cnt += 1
-                    llama_tok_res = llama_tokenizer.tokenize(text)
-                    indicllama_tok_res = indic_llama_tokenizer.tokenize(text)
-                    
-                    if indicllama_tok_res == llama_tok_res :
-                        cnt +=1
-                    else:
-                        print("Test text:\n",text)
-                        print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
-                        print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
+            if indicllama_tok_res == llama_tok_res :
+                cnt +=1
+            else:
+                print("Test text:\n",text)
+                print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
+                print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
 
 
 percentage_error = ((total_cnt-cnt)/total_cnt)*100
