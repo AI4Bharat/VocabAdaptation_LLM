@@ -7,6 +7,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--llama_tokenizer_dir', default="llama_fast_tokenizer", type=str)
 parser.add_argument('--indic_sp_model_file', default='/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/sp_indic.model', type=str)
+parser.add_argument('--evaluation_type', default="word", type=str, help="word||sentence")
 args = parser.parse_args()
 
 llama_tokenizer_dir = args.llama_tokenizer_dir
@@ -21,8 +22,6 @@ llama_tokenizer = LlamaTokenizer.from_pretrained(llama_tokenizer_dir)
 output_sp_dir_m = 'indic_llama_sp_m_filter'
 output_hf_dir_m = 'indic_llama_hf_m_filter' # the path to save indic-LLaMA tokenizer
 
-print(f"indic-LLaMA tokenizer has been saved to {output_hf_dir_m}")
-
 # Test
 llama_tokenizer = LlamaTokenizer.from_pretrained(llama_tokenizer_dir)
 indic_llama_tokenizer = AutoTokenizer.from_pretrained(output_hf_dir_m)
@@ -32,62 +31,37 @@ cnt = 0
 total_cnt = 0
 with open(text_path,'r', encoding='utf-8' ) as file:
         data = file.readlines()
-        # word_set = set()
-        # count_mpt = 0
-        # count_indic = 0
-        # for line in data:
-        #     words = line.split()
-        #     word_set.update(words)
-        
-        # for w in word_set:
-        #     total_cnt += 1
-        #     llama_tok_res = llama_tokenizer.tokenize(w)
-        #     indicllama_tok_res = indic_llama_tokenizer.tokenize(w)
+        if args.evaluation_type == "word":
+            word_set = set()
+            for line in data:
+                words = line.split()
+                word_set.update(words)
             
-        #     if indicllama_tok_res == llama_tok_res :
-        #         cnt +=1
-        #     else:
-        #         print("Test text:\n",w)
-        #         print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
-        #         print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
-            # if total_cnt == 50:
-            #      break
-        
-
-        
-        #for sentence
-        for text in data:
-            total_cnt += 1
-            llama_tok_res = llama_tokenizer.tokenize(text)
-            indicllama_tok_res = indic_llama_tokenizer.tokenize(text)
+            for w in word_set:
+                total_cnt += 1
+                llama_tok_res = llama_tokenizer.tokenize(w)
+                indicllama_tok_res = indic_llama_tokenizer.tokenize(w)
+                
+                if indicllama_tok_res == llama_tok_res :
+                    cnt +=1
+                else:
+                    print("Test text:\n",w)
+                    # print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
+                    # print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
             
-            if indicllama_tok_res == llama_tok_res :
-                cnt +=1
-            else:
-                print("Test text:\n",text)
-                print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
-                print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
-        #     if total_cnt == 50:
-        #          break
+            if args.evaluation_type == "sentence":     
+                for text in data:
+                    total_cnt += 1
+                    llama_tok_res = llama_tokenizer.tokenize(text)
+                    indicllama_tok_res = indic_llama_tokenizer.tokenize(text)
+                    
+                    if indicllama_tok_res == llama_tok_res :
+                        cnt +=1
+                    else:
+                        print("Test text:\n",text)
+                        print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
+                        print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
 
-ratio = total_cnt/cnt
-print("total_cnt is: ", total_cnt)
-print("cnt is: ", cnt)
-print(ratio)
-                  
-                  
 
-# import sentencepiece as spm
-
-# vocab_file=output_sp_dir_m+'/indic_llama.model'
-# sp_model = spm.SentencePieceProcessor()
-# sp_model.Load("merged_tokenizer_sp_m/indic_llama.model")
-# num_tokens = sp_model.GetPieceSize()
-
-# Save the vocabulary to a .vocab file
-# with open("output_vocab.vocab", "w", encoding="utf-8") as vocab_file:
-#     for i in range(num_tokens):
-#         token = sp_model.IdToPiece(i)
-#         vocab_file.write(token + "\n")
-
-# spm.SentencePieceTrainer.export_vocab(model = "merged_tokenizer_sp_m/indic_llama.model", output = "indic_llama_vocab")
+percentage_error = ((total_cnt-cnt)/total_cnt)*100
+print("percentage error ", percentage_error)
