@@ -1,12 +1,8 @@
 import os
 from transformers import LlamaTokenizer, AutoTokenizer
 
-## Save
+
 output_hf_dir_m = 'indic_llama_hf_m_filter' # the path to save indic-LLaMA tokenizer
-
-# print(f"indic-LLaMA tokenizer has been saved to {output_hf_dir_m}")
-
-# Test
 llama_tokenizer = AutoTokenizer.from_pretrained("./llama_fast_tokenizer/")
 indic_llama_tokenizer = AutoTokenizer.from_pretrained(output_hf_dir_m)
 for folder in os.listdir("/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/BPCC-seed/"):
@@ -28,18 +24,11 @@ for folder in os.listdir("/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/BP
 
         sent_en = data_en[i].strip()
         text_en = " ".join(llama_tokenizer.tokenize(sent_en))
-        t = text_en + " ||| " + text_in + "\n"
+        t = text_en + " ||| " + text_in + "\n"   #according to the input format of fastAlign
         data_target.append(t)
 
-
-    # Write the train data to a new file
     train_path = f"/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/fastAlign_BPCC_tok/train_tok.{folder[-8:]}"
     with open(train_path, 'w', encoding='utf-8') as train_file:
         train_file.writelines(data_target)
 
-    # # Write the test data to a new file
     
-    # # Print the sizes of the train and test sets
-    # print("for file : ", folder[-8:])
-    # print(f"Train set size: {len(train_data)}")
-    # print(f"Test set size: {len(test_data)}")
