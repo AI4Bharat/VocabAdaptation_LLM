@@ -8,64 +8,53 @@ import fasttext
 import fasttext.util
 import tempfile
 from functools import partial
+import argparse
+parser = argparse.ArgumentParser()
+parser.add_argument('--source_fasttext_bin', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/llama_tokenized_cbow.bin", type=str)
+parser.add_argument('--target_fasttext_bin', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/Indicllama_tokenize_128k_cbow.bin", type=str)
+parser.add_argument('--align_strategy', default=None, type=str, help="None || bilingual_dictionary") 
+parser.add_argument('--bilingual_dictionary_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/combine_bilingual_dict.txt", type=str)
+parser.add_argument('--llama_tokenizer_dir', default="llama_fast_tokenizer", type=str)
+parser.add_argument('--en_indic_tokenizer', default="indic_llama_hf_m_filter", type=str)
+parser.add_argument('--model_config', default="./config_llama2/", type=str)
+parser.add_argument('--model_path', default="./model_llama2/", type=str)
+parser.add_argument('--output_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel_dict.pt", type=str)
 
-print("hello 1")
 
-source_tokenizer = AutoTokenizer.from_pretrained("llama_fast_tokenizer")
-config = AutoConfig.from_pretrained("./config_llama2/")
+
+args = parser.parse_args()
+
+source_tokenizer = AutoTokenizer.from_pretrained(args.llama_tokenizer_dir)
+config = AutoConfig.from_pretrained(args.model_config)
 
 model = AutoModelForCausalLM.from_pretrained(
-  "./model_llama2/",
+  args.model_path,
   config=config,
 )
 
-# for param in model.state_dict():
-#     print(param)
+# output_hf_dir_m = 'indic_llama_hf_m_filter'
+target_tokenizer = AutoTokenizer.from_pretrained(args.en_indic_tokenizer)
 
-output_hf_dir_m = 'indic_llama_hf_m_filter'
-target_tokenizer = AutoTokenizer.from_pretrained(output_hf_dir_m)
-
-# target_tokenizer = AutoTokenizer.from_pretrained("/home/nandini/vocab_adap/indicbloom_tokenizer_64k")
-print("hello 2")
-#model_target = fasttext.load_model("hin_Deva_fasttext.bin")
-
-
-#embedding size - 4096
-
-
-
-wechsel = WECHSEL(
-    load_embeddings("/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/llama_tokenized_cbow.bin"),
-    load_embeddings("/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/Indicllama_tokenize_128k_cbow.bin"),
+if args.align_strategy == None:
+  wechsel = WECHSEL(
+    load_embeddings(args.source_fasttext_bin),
+    load_embeddings(args.target_fasttext_bin),
     align_strategy= None,
+  )
+else:
+  wechsel = WECHSEL(
+    load_embeddings(args.source_fasttext_bin),
+    load_embeddings(args.target_fasttext_bin),
+    align_strategy= "bilingual_dictionary",
+    bilingual_dictionary = args.bilingual_dictionary_path,
 )
 
-print("hello 3")
-## for LM head
-# target_embeddings, info = wechsel.apply(
-#     source_tokenizer,
-#     target_tokenizer,
-#     model.lm_head.weight.detach().numpy(),
-    
-# )
-###############for main ###############
+
 target_embeddings, info = wechsel.apply(
     source_tokenizer,
     target_tokenizer,
     model.get_input_embeddings().weight.detach().numpy(),
     
 )
-
-#print(model)
 print(len(target_embeddings), "X", len(target_embeddings[0]))
-torch.save(torch.from_numpy(target_embeddings), "/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel.pt")
-# model.get_input_embeddings().weight.data = torch.from_numpy(target_embeddings)
-# model.config.vocab_size = len(target_embeddings)
-# print(model)
-
-# use `model` and `target_tokenizer` to continue training in Swahili!
-# model = AutoModel.from_pretrained("bigscience/bloom-7b1")      #changed this
-
-# text_path = f'/home/nandini/vocab_adap/data_tok/hin_Deva.txt'
-# dataset = load_dataset("text", data_files=text_path, split="train")
-# print(dataset)
+torch.save(torch.from_numpy(target_embeddings), args.output_path)
