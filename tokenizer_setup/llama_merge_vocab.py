@@ -20,9 +20,6 @@ indic_sp_model.Load(indic_sp_model_file)
 
 llama_spm = sp_pb2_model.ModelProto()
 llama_spm.ParseFromString(llama_tokenizer.sp_model.serialized_model_proto())
-# print(llama_spm)
-# ghjgjh
-# print("llama_spm is : ", llama_spm)
 indic_spm = sp_pb2_model.ModelProto()
 indic_spm.ParseFromString(indic_sp_model.serialized_model_proto())
 
@@ -79,17 +76,3 @@ print("Test text:\n",text)
 print(f"Tokenized by LLaMA tokenizer:{llama_tokenizer.tokenize(text)}")
 print(f"Tokenized by indic-LLaMA tokenizer:{indic_llama_tokenizer.tokenize(text)}")
 
-# import sentencepiece as spm
-
-# vocab_file=output_sp_dir_m+'/indic_llama.model'
-# sp_model = spm.SentencePieceProcessor()
-# sp_model.Load("merged_tokenizer_sp_m/indic_llama.model")
-# num_tokens = sp_model.GetPieceSize()
-
-# Save the vocabulary to a .vocab file
-# with open("output_vocab.vocab", "w", encoding="utf-8") as vocab_file:
-#     for i in range(num_tokens):
-#         token = sp_model.IdToPiece(i)
-#         vocab_file.write(token + "\n")
-
-# spm.SentencePieceTrainer.export_vocab(model = "merged_tokenizer_sp_m/indic_llama.model", output = "indic_llama_vocab")
