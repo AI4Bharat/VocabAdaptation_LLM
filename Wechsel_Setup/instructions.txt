@@ -5,7 +5,8 @@ To create billingual-dictionary
 a. cd fast_align
 b. run create_input_data.py to create input to the fast align model
 c. run run_fasttext.sh to create mapping of word
-d. 
-e. cd ..
+d. cd ..
+e. run mapping_output_fastallign.py to align fast align output to word
+f. run final_dict_create.py to create final dictionary for all language
 
 3. Run wechsel_run.py to get embedding using wechsel initialization
