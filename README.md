@@ -1,5 +1,13 @@
 # Vocabulary Adaptation MPT and BLOOM model
 
+### Tokenizer-embed Pipeline 
+1. To train Indic Tokenizer and get the final tokenizer follow tokenizer_setup directory
+2. To evaluate the resulting tokenizer follow tokenizer_evaluation directory
+3. To get embedding using wechsel follow Wechsel_Setup
+4. To initialize the word embedding layer of model follow InitializationWordEmbed
+   
+   
+
 ## Result 
 1. Please find result on https://docs.google.com/spreadsheets/d/1npkCffkNyztbPZokK9vis19zvzzT07l-uWnN06aiOeQ/edit#gid=868636088
 2. Please find Meeting Notes/To-Do list/observation/.. on - https://docs.google.com/document/d/1dOegfXg8v5NBYXlCZgLDnkLBjP1YD_6K47kHh_5ojd0/edit
