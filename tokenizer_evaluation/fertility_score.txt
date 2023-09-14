@@ -1,71 +1,71 @@
 length of indic tokenizer:  152118                                                                                                                          
 length of llama tokenizer:  32000                                                                                                                           
-eng_Latn-tel_Telu                                                                                                                                           
+tel_Telu                                                                                                                                           
 fertility score of llama is :  23.51789229878402                                                                                                            
 fertility score of indic llama is :  2.9931673422119283  
-eng_Latn-gom_Deva                                                                                                                                           
+gom_Deva                                                                                                                                           
 fertility score of llama is :  8.498258446534308                                                                                                            
 fertility score of indic llama is :  2.525252525252525                                                                                                      
-eng_Latn-mar_Deva                                                                                                                                           
+mar_Deva                                                                                                                                           
 fertility score of llama is :  9.670909157215274                                                                                                            
 fertility score of indic llama is :  2.459392436453813                                                                                                      
-eng_Latn-snd_Deva                                                                                                                                           
+snd_Deva                                                                                                                                           
 fertility score of llama is :  7.31679001596285                                                                                                             
 fertility score of indic llama is :  2.55826440284429                                                                                                       
-eng_Latn-ben_Beng                                                                                                                                           
+ben_Beng                                                                                                                                           
 fertility score of llama is :  10.587898856110776                                                                                                           
 fertility score of indic llama is :  2.7304334738109572                                                                                                     
-eng_Latn-tam_Taml                                                                                                                                           
+tam_Taml                                                                                                                                           
 fertility score of llama is :  12.30210592597775                                                                                                            
 fertility score of indic llama is :  2.813405163366683                                                                                                      
-eng_Latn-brx_Deva                                                                                                                                           
+brx_Deva                                                                                                                                           
 fertility score of llama is :  9.521896811276857                                                                                                            
 fertility score of indic llama is :  2.647324483372109                                                                                                      
-eng_Latn-ory_Orya                                                                                                                                           
+ory_Orya                                                                                                                                           
 fertility score of llama is :  22.556703582255768                                                                                                           
 fertility score of indic llama is :  2.92996349687558                                                                                                       
-eng_Latn-hin_Deva                                                                                                                                           
+hin_Deva                                                                                                                                           
 fertility score of llama is :  7.734101115457047                                                                                                            
 fertility score of indic llama is :  2.287918296392873                                                                                                      
-eng_Latn-urd_Arab                                                                                                                                           
+urd_Arab                                                                                                                                           
 fertility score of llama is :  6.432207108380869                                                                                                            
 fertility score of indic llama is :  2.299107795816879                                                                                                      
-eng_Latn-mal_Mlym                                                                                                                                           
+mal_Mlym                                                                                                                                           
 fertility score of llama is :  13.285216915072565                                                                                                           
 fertility score of indic llama is :  3.326683096663146                                                                                                      
-eng_Latn-guj_Gujr                                                                                                                                           
+guj_Gujr                                                                                                                                           
 fertility score of llama is :  18.95724920241049
 fertility score of indic llama is :  2.7352711804324708                                                                                             [0/1844]
-eng_Latn-eng_Latn
+eng_Latn
 fertility score of llama is :  2.521191545285292
 fertility score of indic llama is :  2.519603548351769
-eng_Latn-doi_Deva
+doi_Deva
 fertility score of llama is :  7.480033894714543
 fertility score of indic llama is :  2.3417010909861244
-eng_Latn-san_Deva
+san_Deva
 fertility score of llama is :  12.283594394064304
 fertility score of indic llama is :  3.5896125309150864
-eng_Latn-mni_Mtei
+mni_Mtei
 fertility score of llama is :  20.835536547433904
 fertility score of indic llama is :  3.1783825816485227
-eng_Latn-sat_Olck
+sat_Olck
 fertility score of llama is :  20.181071856839775
 fertility score of indic llama is :  2.6161793192509917
-eng_Latn-pan_Guru
+pan_Guru
 fertility score of llama is :  13.952594810379242
 fertility score of indic llama is :  2.2637225548902196
-eng_Latn-asm_Beng
+asm_Beng
 fertility score of llama is :  12.042979526644402
 fertility score of indic llama is :  2.6932868689802043
-eng_Latn-kan_Knda
+kan_Knda
 fertility score of llama is :  25.21046064780157
 fertility score of indic llama is :  3.1241702849728004
-eng_Latn-npi_Deva
+npi_Deva
 fertility score of llama is :  9.448141078083811
 fertility score of indic llama is :  2.3835560403599674
-eng_Latn-mai_Deva
+mai_Deva
 fertility score of llama is :  8.325693606755127
 fertility score of indic llama is :  2.225723763570567
-eng_Latn-kas_Arab
+kas_Arab
 fertility score of llama is :  7.309113199836535
 fertility score of indic llama is :  2.6327748263179402
