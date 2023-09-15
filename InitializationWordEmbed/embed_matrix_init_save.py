@@ -23,13 +23,12 @@ parser.add_argument("--strategy", default="intersect_random", help="intersect_ra
 parser.add_argument("--block_size", type=int, default=512)
 parser.add_argument('--model_config', default="./config_llama2/", type=str)
 parser.add_argument('--model_path', default="./model_llama2/", type=str)
-parser.add_argument('--save_model_config', default="./config_indicllama2_wechsel_intersect/", type=str)
-parser.add_argument('--save_model_path', default="./model_indicllama2_wechsel_intersect/", type=str)
-parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel.pt", type=str)
+parser.add_argument('--save_model_config', default="./config_indicLLma_IR", type=str)
+parser.add_argument('--save_model_path', default="./model_indicllama_IR/", type=str)
+parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel_dict.pt", type=str)
 
 
 args = parser.parse_args()
-
 
 
 ##############creating word embediing
@@ -64,12 +63,14 @@ random_fallback_matrix = np.random.RandomState(1234).normal(
     )
 
 if args.strategy == "intersect_random":
+    print("in intersect_random")
     for index, token in enumerate(target_vocab):
         if token in source_vocab:
             target_matrix[target_vocab[token]] = source_matrix[source_vocab[token]]
         else :
             target_matrix[target_vocab[token]] = random_fallback_matrix[index]
 elif args.strategy == "intersect_wechsel":
+    print("in intersect wechsel")
     wechsel_matrix = torch.load(args.wechsel_emb_path)
     for index, token in enumerate(target_vocab):
         if token in source_vocab:
