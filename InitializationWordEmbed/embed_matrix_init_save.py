@@ -1,7 +1,9 @@
 # peft model py 681
 import os
+# os.environ["CUDA_VISIBLE_DEVICES"]="0"
 import torch
 import torch.nn as nn
+# import bitsandbytes as bnb
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, LlamaTokenizer
 import transformers
 from datasets import load_dataset
@@ -21,8 +23,8 @@ parser.add_argument("--strategy", default="intersect_random", help="intersect_ra
 parser.add_argument("--block_size", type=int, default=512)
 parser.add_argument('--model_config', default="./config_llama2/", type=str)
 parser.add_argument('--model_path', default="./model_llama2/", type=str)
-parser.add_argument('--save_model_config', default="./config_indic_llama2/", type=str)
-parser.add_argument('--save_model_path', default="./model_indic_llama2/", type=str)
+parser.add_argument('--save_model_config', default="./config_indicllama2_wechsel_intersect/", type=str)
+parser.add_argument('--save_model_path', default="./model_indicllama2_wechsel_intersect/", type=str)
 parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel.pt", type=str)
 
 
@@ -67,7 +69,7 @@ if args.strategy == "intersect_random":
             target_matrix[target_vocab[token]] = source_matrix[source_vocab[token]]
         else :
             target_matrix[target_vocab[token]] = random_fallback_matrix[index]
-if args.strategy == "intersect_wechsel":
+elif args.strategy == "intersect_wechsel":
     wechsel_matrix = torch.load(args.wechsel_emb_path)
     for index, token in enumerate(target_vocab):
         if token in source_vocab:
@@ -75,8 +77,10 @@ if args.strategy == "intersect_wechsel":
         else :
             target_matrix[target_vocab[token]] = wechsel_matrix[index]
 
-if args.strategy == "all_wechsel":
-    target_matrix[target_vocab[token]] = wechsel_matrix[index]
+elif args.strategy == "all_wechsel":
+    wechsel_matrix = torch.load(args.wechsel_emb_path)
+    for index, token in enumerate(target_vocab):
+        target_matrix[target_vocab[token]] = wechsel_matrix[index]
 
 
 config.vocab_size = len(target_matrix)
