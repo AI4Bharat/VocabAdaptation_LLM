@@ -29,7 +29,7 @@ parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandi
 
 
 args = parser.parse_args()
-wandb.init(project="vocab_adap_clm", entity="nandinimundra", name = f"{args.run_name}")
+
 
 
 ##############creating word embediing
