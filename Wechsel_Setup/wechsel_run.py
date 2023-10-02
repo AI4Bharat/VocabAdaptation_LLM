@@ -19,12 +19,12 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--indic_tokenizer", default="indic_llama_hf_m_filter")
 parser.add_argument("--source_tokenizer", default="./llama_fast_tokenizer/")
-parser.add_argument("--strategy", default="intersect_wechsel", help="intersect_random || intersect_wechsel || all_wechsel")
+parser.add_argument("--strategy", default="intersect_wechsel", help="intersect_random || intersect_wechsel || direct_init")
 parser.add_argument("--block_size", type=int, default=512)
 parser.add_argument('--model_config', default="./config_llama2/", type=str)
 parser.add_argument('--model_path', default="./model_llama2/", type=str)
-parser.add_argument('--save_model_config', default="./config_indicLLma_IW_wikitionary_correct", type=str)
-parser.add_argument('--save_model_path', default="./model_indicllama_IW_wikitionary_correct/", type=str)
+parser.add_argument('--save_model_config', default="./config_indicLLma_IR_wikitionary_correct", type=str)
+parser.add_argument('--save_model_path', default="./model_indicllama_IR_wikitionary_correct/", type=str)
 parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel_dict_eikitionary.pt", type=str)
 parser.add_argument('--wechsel_lmhead_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_lmhead_128k_wechsel_dict_wikitionary.pt", type=str)
 
@@ -110,10 +110,11 @@ elif args.strategy == "intersect_wechsel":
         else :
             target_matrix_lmhead[target_vocab[token]] = wechsel_matrix_lmhead[index]
 
-# elif args.strategy == "all_wechsel":
-#     wechsel_matrix = torch.load(args.wechsel_emb_path)
-#     for index, token in enumerate(target_vocab):
-#         target_matrix[target_vocab[token]] = wechsel_matrix[index]
+elif args.strategy == "direct_init":
+    wechsel_matrix_emb = torch.load(args.wechsel_emb_path)
+    wechsel_matrix_lmhead = torch.load(args.wechsel_lmhead_path)
+    target_matrix_emb = wechsel_matrix_emb
+    target_matrix_lmhead = wechsel_matrix_lmhead
 
 
 config.vocab_size = len(target_matrix_emb)
