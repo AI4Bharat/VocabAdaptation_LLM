@@ -19,13 +19,15 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--indic_tokenizer", default="indic_llama_hf_m_filter")
 parser.add_argument("--source_tokenizer", default="./llama_fast_tokenizer/")
-parser.add_argument("--strategy", default="intersect_random", help="intersect_random || intersect_wechsel || all_wechsel")
+parser.add_argument("--strategy", default="intersect_wechsel", help="intersect_random || intersect_wechsel || direct_init")
 parser.add_argument("--block_size", type=int, default=512)
 parser.add_argument('--model_config', default="./config_llama2/", type=str)
 parser.add_argument('--model_path', default="./model_llama2/", type=str)
-parser.add_argument('--save_model_config', default="./config_indicLLma_IR", type=str)
-parser.add_argument('--save_model_path', default="./model_indicllama_IR/", type=str)
-parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel_dict.pt", type=str)
+parser.add_argument('--save_model_config', default="./config_indicLLma_IR_wikitionary_correct", type=str)
+parser.add_argument('--save_model_path', default="./model_indicllama_IR_wikitionary_correct/", type=str)
+parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel_dict_eikitionary.pt", type=str)
+parser.add_argument('--wechsel_lmhead_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_lmhead_128k_wechsel_dict_wikitionary.pt", type=str)
+
 
 
 args = parser.parse_args()
@@ -47,48 +49,80 @@ source_model = AutoModelForCausalLM.from_pretrained(
 embedding_size = source_model.get_input_embeddings().weight.shape[0]
 
 
-source_matrix = source_model.get_input_embeddings().weight.detach().numpy().copy()
+source_matrix_emb = source_model.get_input_embeddings().weight.detach().numpy().copy()
+source_matrix_lmhead = source_model.state_dict()['lm_head.weight'].numpy()
 source_vocab = source_tokenizer.vocab
 target_vocab = target_tokenizer.vocab
 
-target_matrix = np.zeros(
-        (len(target_tokenizer), source_matrix.shape[1]), dtype=source_matrix.dtype
+target_matrix_emb = np.zeros(
+        (len(target_tokenizer), source_matrix_emb.shape[1]), dtype=source_matrix_emb.dtype
     )
-mean, std = (
-        source_matrix.mean(0),
-        source_matrix.std(0),
+
+target_matrix_lmhead = np.zeros(
+        (len(target_tokenizer), source_matrix_lmhead.shape[1]), dtype=source_matrix_lmhead.dtype
     )
-random_fallback_matrix = np.random.RandomState(1234).normal(
-        mean, std, (len(target_tokenizer.vocab), source_matrix.shape[1])
+
+
+
+mean_emb, std_emb = (
+        source_matrix_emb.mean(0),
+        source_matrix_emb.std(0),
+    )
+
+mean_lmhead, std_lmhead = (
+        source_matrix_lmhead.mean(0),
+        source_matrix_lmhead.std(0),
+    )
+
+
+random_fallback_matrix_emb = np.random.RandomState(1234).normal(
+        mean_emb, std_emb, (len(target_tokenizer.vocab), source_matrix_emb.shape[1])
+    )
+
+random_fallback_matrix_lmhead = np.random.RandomState(1234).normal(
+        mean_lmhead, std_lmhead, (len(target_tokenizer.vocab), source_matrix_lmhead.shape[1])
     )
 
 if args.strategy == "intersect_random":
     print("in intersect_random")
     for index, token in enumerate(target_vocab):
         if token in source_vocab:
-            target_matrix[target_vocab[token]] = source_matrix[source_vocab[token]]
+            target_matrix_emb[target_vocab[token]] = source_matrix_emb[source_vocab[token]]
         else :
-            target_matrix[target_vocab[token]] = random_fallback_matrix[index]
+            target_matrix_emb[target_vocab[token]] = random_fallback_matrix_emb[index]
+        
+        if token in source_vocab:
+            target_matrix_lmhead[target_vocab[token]] = source_matrix_lmhead[source_vocab[token]]
+        else :
+            target_matrix_lmhead[target_vocab[token]] = random_fallback_matrix_lmhead[index]
 elif args.strategy == "intersect_wechsel":
     print("in intersect wechsel")
-    wechsel_matrix = torch.load(args.wechsel_emb_path)
+    wechsel_matrix_emb = torch.load(args.wechsel_emb_path)
+    wechsel_matrix_lmhead = torch.load(args.wechsel_lmhead_path)
     for index, token in enumerate(target_vocab):
         if token in source_vocab:
-            target_matrix[target_vocab[token]] = source_matrix[source_vocab[token]]
+            target_matrix_emb[target_vocab[token]] = source_matrix_emb[source_vocab[token]]
         else :
-            target_matrix[target_vocab[token]] = wechsel_matrix[index]
+            target_matrix_emb[target_vocab[token]] = wechsel_matrix_emb[index]
+        
+        if token in source_vocab:
+            target_matrix_lmhead[target_vocab[token]] = source_matrix_lmhead[source_vocab[token]]
+        else :
+            target_matrix_lmhead[target_vocab[token]] = wechsel_matrix_lmhead[index]
 
-elif args.strategy == "all_wechsel":
-    wechsel_matrix = torch.load(args.wechsel_emb_path)
-    for index, token in enumerate(target_vocab):
-        target_matrix[target_vocab[token]] = wechsel_matrix[index]
+elif args.strategy == "direct_init":
+    wechsel_matrix_emb = torch.load(args.wechsel_emb_path)
+    wechsel_matrix_lmhead = torch.load(args.wechsel_lmhead_path)
+    target_matrix_emb = wechsel_matrix_emb
+    target_matrix_lmhead = wechsel_matrix_lmhead
 
 
-config.vocab_size = len(target_matrix)
+config.vocab_size = len(target_matrix_emb)
 model = AutoModelForCausalLM.from_config(config, trust_remote_code=True)
 print(model)
 
-model.state_dict()['model.embed_tokens.weight'].copy_(torch.from_numpy(target_matrix))   #word embedding setting
+model.state_dict()['model.embed_tokens.weight'].copy_(torch.from_numpy(target_matrix_emb))   #word embedding setting
+model.state_dict()['lm_head.weight'].copy_(torch.from_numpy(target_matrix_lmhead))
 for param in source_model.state_dict():
     # print(param)
     if "model.embed_tokens.weight" in param:
