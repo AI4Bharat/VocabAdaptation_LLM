@@ -19,7 +19,8 @@ parser = argparse.ArgumentParser()
 
 parser.add_argument("--indic_tokenizer", default="indic_llama_hf_m_filter")
 parser.add_argument("--source_tokenizer", default="./llama_fast_tokenizer/")
-parser.add_argument("--strategy", default="intersect_wechsel", help="intersect_random || intersect_wechsel || direct_init")
+parser.add_argument("--strategy", default="intersect_wechsel", help="intersect_random_normal | intersect_random_multivariate_normal || intersect_wechsel || direct_init")
+parser.add_argument("--multivariate_sigma_scale", type=float, default=1e-5)
 parser.add_argument("--block_size", type=int, default=512)
 parser.add_argument('--model_config', default="./config_llama2/", type=str)
 parser.add_argument('--model_path', default="./model_llama2/", type=str)
@@ -63,28 +64,38 @@ target_matrix_lmhead = np.zeros(
     )
 
 
+if args.strategy == "intersect_random_normal":
+    mean_emb, std_emb = (
+            source_matrix_emb.mean(0),
+            source_matrix_emb.std(0),
+        )
 
-mean_emb, std_emb = (
-        source_matrix_emb.mean(0),
-        source_matrix_emb.std(0),
-    )
-
-mean_lmhead, std_lmhead = (
-        source_matrix_lmhead.mean(0),
-        source_matrix_lmhead.std(0),
-    )
+    mean_lmhead, std_lmhead = (
+            source_matrix_lmhead.mean(0),
+            source_matrix_lmhead.std(0),
+        )
 
 
-random_fallback_matrix_emb = np.random.RandomState(1234).normal(
-        mean_emb, std_emb, (len(target_tokenizer.vocab), source_matrix_emb.shape[1])
-    )
+    random_fallback_matrix_emb = np.random.RandomState(1234).normal(
+            mean_emb, std_emb, (len(target_tokenizer.vocab), source_matrix_emb.shape[1])
+        )
 
-random_fallback_matrix_lmhead = np.random.RandomState(1234).normal(
-        mean_lmhead, std_lmhead, (len(target_tokenizer.vocab), source_matrix_lmhead.shape[1])
-    )
+    random_fallback_matrix_lmhead = np.random.RandomState(1234).normal(
+            mean_lmhead, std_lmhead, (len(target_tokenizer.vocab), source_matrix_lmhead.shape[1])
+        )
+elif args.strategy == "intersect_random_multivariate_normal":
+    mu_emb = source_matrix_emb.mean(0)
+    n_emb = source_matrix_emb.shape[0]
+    sigma_emb = (source_matrix_emb - mu_emb).T.dot(source_matrix_emb - mu_emb) / n_emb
+    mu_lmhead = source_matrix_lmhead.mean(0)
+    n_lmhead = source_matrix_lmhead.shape[0]
+    sigma_lmhead = (source_matrix_lmhead - mu_lmhead).T.dot(source_matrix_lmhead - mu_lmhead) / n_lmhead
+    random_fallback_matrix_emb = np.random.multivariate_normal(mu_emb, args.multivariate_sigma_scale * sigma_emb, (len(target_tokenizer.vocab)))
+    random_fallback_matrix_lmhead = np.random.multivariate_normal(mu_lmhead, args.multivariate_sigma_scale * sigma_lmhead, (len(target_tokenizer.vocab)))
 
-if args.strategy == "intersect_random":
-    print("in intersect_random")
+
+if args.strategy == "intersect_random_normal" or args.strategy == "intersect_random_multivariate_normal":
+    print("in", args.strategy)
     for index, token in enumerate(target_vocab):
         if token in source_vocab:
             target_matrix_emb[target_vocab[token]] = source_matrix_emb[source_vocab[token]]
