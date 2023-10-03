@@ -96,8 +96,10 @@ elif args.strategy == "intersect_random_multivariate_normal":
 
 if args.strategy == "intersect_random_normal" or args.strategy == "intersect_random_multivariate_normal":
     print("in", args.strategy)
+    total_overlaps = 0
     for index, token in enumerate(target_vocab):
         if token in source_vocab:
+            total_overlaps += 1
             target_matrix_emb[target_vocab[token]] = source_matrix_emb[source_vocab[token]]
         else :
             target_matrix_emb[target_vocab[token]] = random_fallback_matrix_emb[index]
@@ -106,8 +108,9 @@ if args.strategy == "intersect_random_normal" or args.strategy == "intersect_ran
             target_matrix_lmhead[target_vocab[token]] = source_matrix_lmhead[source_vocab[token]]
         else :
             target_matrix_lmhead[target_vocab[token]] = random_fallback_matrix_lmhead[index]
+    print("total overlaps", total_overlaps)
 elif args.strategy == "intersect_wechsel":
-    print("in intersect wechsel")
+    print("in", args.strategy)
     wechsel_matrix_emb = torch.load(args.wechsel_emb_path)
     wechsel_matrix_lmhead = torch.load(args.wechsel_lmhead_path)
     for index, token in enumerate(target_vocab):
@@ -122,6 +125,7 @@ elif args.strategy == "intersect_wechsel":
             target_matrix_lmhead[target_vocab[token]] = wechsel_matrix_lmhead[index]
 
 elif args.strategy == "direct_init":
+    print("in", args.strategy)
     wechsel_matrix_emb = torch.load(args.wechsel_emb_path)
     wechsel_matrix_lmhead = torch.load(args.wechsel_lmhead_path)
     target_matrix_emb = wechsel_matrix_emb
