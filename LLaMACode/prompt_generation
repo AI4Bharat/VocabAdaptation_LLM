@@ -1,0 +1,59 @@
+from transformers import AutoTokenizer, LlamaForCausalLM, AutoModelForCausalLM, AutoConfig
+
+tokenizer = AutoTokenizer.from_pretrained("./llama_tokenizer/")
+config = AutoConfig.from_pretrained("./config_llama2/")
+
+# config.init_device = 'cuda:0' # For fast initialization directly on GPU!
+model_kwargs = {"device_map": "auto"}
+model = AutoModelForCausalLM.from_pretrained(
+  "./model_llama2/",
+  config=config, **model_kwargs
+#   load_in_8bit=True, 
+#   torch_dtype=torch.bfloat16, # Load model weights in bfloat16
+)
+
+# model = LlamaForCausalLM.from_pretrained(PATH_TO_CONVERTED_WEIGHTS)
+# tokenizer = AutoTokenizer.from_pretrained(PATH_TO_CONVERTED_TOKENIZER)
+
+prompts = [ "aaj tez baarish ho rhi hei", "tumhara naam kya hei", "ye bohot sundar jagah hei", "abhi achi movie konsi release hui hei"]
+# inputs = tokenizer(prompt, return_tensors="pt")
+
+# Generate
+data= []
+for prompt in prompts:
+    s = "Prompt: "+ prompt
+    data.append(s)
+    inputs = tokenizer(prompt, return_tensors="pt")
+    generate_ids = model.generate(inputs.input_ids, max_length=80)
+    s = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0] +"\n"
+    print(s)
+    data.append(s)
+    generate_ids = model.generate(inputs.input_ids, max_length=60, do_sample = True)
+    s = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0] + "\n"
+    print(s)
+    data.append(s)
+
+    generate_ids = model.generate(inputs.input_ids, max_length=80, penalty_alpha = 4)
+    s = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0] + "\n"
+    print(s)
+    data.append(s)
+
+    generate_ids = model.generate(inputs.input_ids, max_length=80, penalty_alpha = 1, do_sample = True)
+    s = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0] + "\n"
+    print(s)
+    data.append(s)
+    generate_ids = model.generate(inputs.input_ids, max_length=80, penalty_alpha = 1)
+    s = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0] + "\n"
+    print(s)
+    data.append(s)
+
+    generate_ids = model.generate(inputs.input_ids, early_stopping=True, penalty_alpha = 1,  no_repeat_ngram_size=2, num_beams=5)
+    s = tokenizer.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)[0] + "\n"
+    print(s)
+    data.append(s)
+
+
+output_file = 'llama2_7B_generate_1.txt'
+with open(output_file, 'w', encoding='utf-8') as file:
+    file.writelines(data)
+print(s)
