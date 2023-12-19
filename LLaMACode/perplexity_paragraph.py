@@ -46,7 +46,7 @@ def calculate_perplexity(text):
 
     nlls = []
     prev_end_loc = 0
-    for begin_loc in tqdm(range(0, seq_len, stride)):
+    for begin_loc in (range(0, seq_len, stride)):
         end_loc = min(begin_loc + max_length, seq_len)
         trg_len = end_loc - prev_end_loc  # may be different from stride on last loop
         input_ids = encodings.input_ids[:, begin_loc:end_loc].to(device)
@@ -71,10 +71,14 @@ def calculate_perplexity(text):
     return ppl
 
 ppl_list = []
+sum_perp = 0
 # Calculating perplexity for each paragraph
 for i, paragraph in enumerate(tqdm(test)):
     ppl = calculate_perplexity(paragraph['text'])
     ppl_list.append(ppl)
+    # sum_perp += ppl
+
     # print(f"Paragraph {i+1}: Perplexity = {ppl}")
-print(len(ppl_list))
-print("average is: ", np.mean(ppl_list))
+len_ppl = len(ppl_list)
+# avg_perp = sum_perp/len_ppl
+print("average is: ", torch.stack(ppl_list).mean())
