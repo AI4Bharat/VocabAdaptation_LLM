@@ -3,6 +3,7 @@ from datasets import load_dataset
 import torch
 import argparse
 from tqdm import tqdm
+import numpy as np
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--max_length", type=int, default=4096)
