@@ -4,12 +4,15 @@ import torch
 import argparse
 from tqdm import tqdm
 import numpy as np
+from flash_attn import flash_attn_qkvpacked_func, flash_attn_func
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--max_length", type=int, default=4096)
+parser.add_argument("--max_length", type=int, default=2048)
 parser.add_argument("--stride", type=int, default=512)
 parser.add_argument('--precision', type=str, default='bf16', choices=['fp32', 'fp16', 'bf16'],
                     help='Precision format (fp32, fp16, bf16)')
+parser.add_argument('--use_flash_attn', type=str, default='true', choices=['true', 'false'],
+                    help='attention flag that is true or false')
 args = parser.parse_args()
 
 # Initialize tokenizer and model
@@ -28,13 +31,23 @@ device = "cuda"
 model_kwargs = {"device_map": "auto"}
 model = AutoModelForCausalLM.from_pretrained(
     "/data/nandini/vocab_adapt/codes/model_llama2/",
-    config=config, **model_kwargs,
+    config=config, 
     torch_dtype=torch_dtype,
+    use_flash_attention_2=  True if "true" in args.use_flash_attn else False,
+    **model_kwargs,
 )
 # model.to(device)
 print("model loaded")
 
-test = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+cache_directory = "/data-2/nandini/hf_dataset"
+dataset = load_dataset("parquet", data_files='/data-2/nandini/english', cache_dir=cache_directory)
+full_dataset = dataset['train']
+
+# Split the dataset into train and test sets (10% for test set)
+train_test_split = full_dataset.train_test_split(test_size=0.001)
+test = train_test_split['test']
+# test = load_dataset("wikitext", "wikitext-2-raw-v1", split="test")
+# test = dataset.train_test_split(test_size=0.1)
 
 def calculate_perplexity(text):
     encodings = tokenizer(text, return_tensors="pt")
@@ -71,14 +84,22 @@ def calculate_perplexity(text):
     return ppl
 
 ppl_list = []
-sum_perp = 0
+count = 0
+
 # Calculating perplexity for each paragraph
 for i, paragraph in enumerate(tqdm(test)):
+    # print(paragraph)
     ppl = calculate_perplexity(paragraph['text'])
-    ppl_list.append(ppl)
+    if(torch.isnan(ppl)):
+        # print(paragraph['text'])
+        count +=1
+    else:
+        ppl_list.append(ppl)
+
     # sum_perp += ppl
 
     # print(f"Paragraph {i+1}: Perplexity = {ppl}")
 len_ppl = len(ppl_list)
+print("count of nan value is : ",count)
 # avg_perp = sum_perp/len_ppl
 print("average is: ", torch.stack(ppl_list).mean())
