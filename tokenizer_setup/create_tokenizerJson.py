@@ -18,8 +18,8 @@ with open("tmp_dir_sentecepiece/merges.txt", 'r', encoding='utf-8') as file:
 
         merge.extend(words)
 
-# with open("merge_2.txt", "w") as file:
-#     file.writelines(f"{item}" for item in final_line)
+with open("merge_2.txt", "w") as file:
+    file.writelines(f"{item}" for item in final_line)
 
 with open('tmp_dir_sentecepiece/vocab.json', 'r') as file:
     data = json.load(file)
