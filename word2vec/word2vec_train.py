@@ -95,7 +95,14 @@ class FreezeWeightsCallback(CallbackAny2Vec):
 
 
 callback = FreezeWeightsCallback(original_input_vectors, original_output_vectors)
-model.train(sentences, total_examples=model.corpus_count, epochs=model.epochs, callbacks=[callback])
+sentences = [
+    ["cat", "sat", "on", "the", "mat"],
+    ["dog", "sat", "on", "the", "rug"],
+    ["cat", "chased", "the", "dog"]
+]
+print("training started")
+model.train(sentences, total_examples=model.corpus_count, epochs=5, callbacks=[callback])
+
 
 # model.train()
 
