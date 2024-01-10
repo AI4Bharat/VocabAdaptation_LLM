@@ -1,3 +1,4 @@
+#reference - https://towardsdatascience.com/skip-gram-neural-network-from-scratch-485f2e688238
 import numpy as np
 import torch
 import torch.nn as nn
@@ -7,6 +8,8 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, LlamaT
 # import matplotlib.pyplot as plt
 
 dtype = torch.FloatTensor
+
+#to create vocabulary and the input data
 source_tokenizer = AutoTokenizer.from_pretrained('/data-3/nandini/vocab_adapt/codes/llama_tokenizer')
 target_tokenizer = AutoTokenizer.from_pretrained('/data-3/nandini/vocab_adapt/codes/indic_llama_hat_m_filter/', use_fast = False)
 
@@ -23,9 +26,7 @@ with open(f'/data-3/nandini/vocab_adapt/codes/tok_eng.txt', encoding='utf-8') as
 
 # list all the words present in our corpus
 word_sequence = " ".join(sentences).split()
-
 word_list = list_token
-
 word_dict = {w: i for i, w in enumerate(word_list)}  #create dictionary word:index
 
 
@@ -34,17 +35,9 @@ batch_size = 20  # To show 2 dim embedding graph
 embedding_size = 4096  # To show 2 dim embedding graph
 voc_size = len(word_list)
 
-# input word
+# defined the context
 j = 1
-# print("Input word : ")
-# print(word_sequence[j], word_dict[word_sequence[j]])
 
-# # context words
-# print("Context words : ")
-# print(word_sequence[j - 1], word_sequence[j + 1])
-# print([word_dict[word_sequence[j - 1]], word_dict[word_sequence[j + 1]]])
-
-# Make skip gram of one size window
 skip_grams = []
 for i in range(1, len(word_sequence) - 1):
     input = word_dict[word_sequence[i]]
@@ -54,11 +47,59 @@ for i in range(1, len(word_sequence) - 1):
         skip_grams.append([input, w])
 
 
-#lets plot some data
-skip_grams[:6]
+# np.random.seed(172)
+
+#to initialize the matrix
+
+config = AutoConfig.from_pretrained("/data-3/nandini/vocab_adapt/codes/config_llama2/", trust_remote_code=True)
+source_model = AutoModelForCausalLM.from_pretrained(
+    "/data-3/nandini/vocab_adapt/codes/model_llama2/",
+    config=config,
+)
 
 
-np.random.seed(172)
+# embedding_size = source_model.get_input_embeddings().weight.shape[0]
+source_matrix_emb = source_model.get_input_embeddings().weight.detach().numpy().copy()
+source_matrix_lmhead = source_model.state_dict()['lm_head.weight'].numpy()
+source_vocab = source_tokenizer.get_vocab()
+target_vocab = target_tokenizer.get_vocab()
+print("source_ebed matrix size id: ", source_matrix_emb.shape)
+print("embedding size is: ", embedding_size)
+
+mean_emb, std_emb = (
+            source_matrix_emb.mean(0),
+            source_matrix_emb.std(0),
+        )
+
+mean_lmhead, std_lmhead = (
+        source_matrix_lmhead.mean(0),
+        source_matrix_lmhead.std(0),
+    )
+
+
+random_fallback_matrix_emb = np.random.RandomState(1234).normal(
+        mean_emb, std_emb, (len(target_tokenizer.get_vocab()), source_matrix_emb.shape[1])
+    )
+
+random_fallback_matrix_lmhead = np.random.RandomState(1234).normal(
+        mean_lmhead, std_lmhead, (len(target_tokenizer.get_vocab()), source_matrix_lmhead.shape[1])
+    )
+
+W_embeddings = np.zeros((voc_size, embedding_size))
+V_embeddings = np.zeros((voc_size, embedding_size))
+
+
+for index, token in enumerate(target_vocab):
+    if token in source_vocab:
+        W_embeddings[word_dict[token]] = source_matrix_emb[source_vocab[token]]
+    else :
+        W_embeddings[word_dict[token]] = random_fallback_matrix_emb[index]
+    
+    if token in source_vocab:
+        V_embeddings[word_dict[token]] = source_matrix_lmhead[source_vocab[token]]
+    else :
+        V_embeddings[word_dict[token]] = random_fallback_matrix_lmhead[index]
+
 
 def random_batch(data, size):
     random_inputs = []
@@ -72,19 +113,19 @@ def random_batch(data, size):
 
     return random_inputs, random_labels
 
-random_batch(skip_grams[:6], size=3)
+
 
 # inputs: like , i, dog , context: i, dog, i
 
 
 # Model
 class Word2Vec(nn.Module):
-    def __init__(self):
+    def __init__(self, W_init, V_init):
         super(Word2Vec, self).__init__()
 
         # parameters between -1 and + 1
-        self.W = nn.Parameter(-2 * torch.rand(voc_size, embedding_size) + 1).type(dtype) # voc_size -> embedding_size Weight
-        self.V = nn.Parameter(-2 * torch.rand(embedding_size, voc_size) + 1).type(dtype) # embedding_size -> voc_size Weight
+        self.W = nn.Parameter(torch.tensor(W_init).float())  # Convert numpy array to tensor
+        self.V = nn.Parameter(torch.tensor(V_init).float().t())  # Convert numpy array to tensor
 
     def forward(self, X):
         X = X.float()
@@ -93,12 +134,25 @@ class Word2Vec(nn.Module):
         #return output_layer 
         return output_layer
 
-model = Word2Vec()
+model = Word2Vec(W_embeddings, V_embeddings)
 # Set the model in train mode
 model.train()
 
 criterion = nn.CrossEntropyLoss() # Softmax (for multi-class classification problems) is already included
 optimizer = optim.Adam(model.parameters(), lr=0.001)
+
+frozen_tokens = []
+tokens_to_freeze = []
+for index, token in enumerate(source_vocab):
+    frozen_tokens.append(token)
+    tokens_to_freeze.append(word_dict[token])
+
+W_mask = torch.ones_like(model.W)
+V_mask = torch.ones_like(model.V)
+for index in tokens_to_freeze:
+    W_mask[index] = 0
+    V_mask[:, index] = 0  #As it is transposed
+
 
 # Training
 for epoch in range(1):
@@ -110,9 +164,7 @@ for epoch in range(1):
 
         # Convert to tensors
         input_batch = torch.tensor(np.array(input_batch))
-        # input_batch = torch.tensor(input_batch)
         target_batch = torch.tensor(np.array(target_batch, dtype=np.int64))
-        # target_batch = torch.tensor(target_batch)
 
         # Zero gradients
         optimizer.zero_grad()
@@ -126,8 +178,10 @@ for epoch in range(1):
 
         # Backward pass and optimize
         loss.backward()
+        model.W.grad *= W_mask
+        model.V.grad *= V_mask
         optimizer.step()
-        # print("after 1 batch")
+        print("after 1 batch")
 
     # Print average loss per epoch
     print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.6f}'.format(total_loss / (len(skip_grams) // batch_size)))
