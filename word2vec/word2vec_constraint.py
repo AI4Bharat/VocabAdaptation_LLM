@@ -136,14 +136,16 @@ class Word2Vec(nn.Module):
         self.A_W = nn.Parameter(torch.rand(self.new_size, self.original_size))
         self.A_V = nn.Parameter(torch.rand(self.new_size, self.original_size))
 
-        
 
     def forward(self, X):
         X = X.float()
+        # print("self.A_W shape:", self.A_W.shape)
+        # print("self.W[:self.original_size] shape:", self.W[:self.original_size].shape)
+        # print("self.A_V shape:", self.A_V.shape)
+        # print("self.V[:, :self.original_size].t() shape:", self.V[:, :self.original_size].t().shape)
         # Compute new embeddings as a combination of the original ones
         new_embeddings_W = F.softmax(self.A_W, dim=-1).mm(self.W[:self.original_size])
-        new_embeddings_V = F.softmax(self.A_V, dim=-1).mm(self.V[:, :self.original_size])
-
+        new_embeddings_V = F.softmax(self.A_V, dim=-1).mm(self.V[:, :self.original_size].t())
         # Update the latter half of W and V with new embeddings indirectly through A_W and A_V
         with torch.no_grad():  
             self.W[self.original_size:] = new_embeddings_W
