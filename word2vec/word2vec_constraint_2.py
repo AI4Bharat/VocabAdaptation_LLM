@@ -113,34 +113,23 @@ class Word2Vec(nn.Module):
     def forward(self, X):
         X = X.float()
         
-        # Compute new embeddings dynamically
+        # F.softmax(self.A_W, dim=-1) represents the probability score and W_original the original embedding. Thus the resultant is the 
+        #linear combination of the oroginal embedding weighted combination of the probability.
+        #here new_embedding is actually the embedding of the new token added that is 31199 new token added.
+
         new_embeddings_W = F.softmax(self.A_W, dim=-1).mm(self.W_original)  #torch.Size([31199, 4096])
         new_embeddings_V = F.softmax(self.A_V, dim=-1).mm(self.V_original)  #torch.Size([31199, 4096])
 
-        print("AW is:::::")
-        print(A_W)
 
-        print("softmax of A_W is: ::::::::::::::")
-        print(F.softmax(self.A_W, dim=-1))
+        # we are concatenating the final new embedding that is orginal + embedding of new token, 
+        #this combined_W denotes the word embedding layer of the final model
 
-
-        print("Shape of A_W:", self.A_W.shape)
-        print("Shape of A_V:", self.A_V.shape)
-
-        print("Shape of W_original:", self.W_original.shape)
-        print("Shape of V_original:", self.V_original.shape)        
-
-        print("Shape of new_embeddings_W:", new_embeddings_W.shape)
-        print("Shape of new_embeddings_V:", new_embeddings_V.shape)
-
-        # Use both original and new embeddings for computation
         self.combined_W = torch.cat((self.W_original, new_embeddings_W), dim=0)  #torch.Size([63199, 4096])
         self.combined_V = torch.cat((self.V_original, new_embeddings_V), dim=0)  #torch.Size([63199, 4096])
 
-        print("Shape of combined_W:", self.combined_W.shape)
-        print("Shape of combined_V:", self.combined_V.shape)
         
         # Compute the hidden layer and output using the combined embeddings
+        print("shape of X is: ", X.shape)
         hidden_layer = torch.matmul(X, self.combined_W)      #torch.Size([20, 4096])
         output_layer = torch.matmul(hidden_layer, self.combined_V.t())       #torch.Size([20, 63199])
 
