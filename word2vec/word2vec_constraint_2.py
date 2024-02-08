@@ -130,7 +130,7 @@ class Word2Vec(nn.Module):
         new_embeddings_V = F.softmax(self.A_V, dim=-1).mm(self.V_original)  #torch.Size([31199, 4096])
 
 
-        # We are concatenating the final new embedding, which is the original embedding plus the embedding of the new token. 
+        # concatenating the final new embedding, which is the original embedding plus the embedding of the new token. 
         # This combined_W represents the word embedding layer of the final model.
 
         self.combined_W = torch.cat((self.W_original, new_embeddings_W), dim=0)  #torch.Size([63199, 4096])
