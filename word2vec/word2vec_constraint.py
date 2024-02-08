@@ -10,8 +10,8 @@ import torch.nn.functional as F
 dtype = torch.FloatTensor
 
 #to create vocabulary and the input data
-source_tokenizer = AutoTokenizer.from_pretrained('/data-3/nandini/vocab_adapt/codes/llama_tokenizer')
-target_tokenizer = AutoTokenizer.from_pretrained('/data-3/nandini/vocab_adapt/codes/indic_llama_hat_m_filter/', use_fast = False)
+source_tokenizer = AutoTokenizer.from_pretrained('/data/nandini/vocab_adapt/codes/llama_tokenizer')
+target_tokenizer = AutoTokenizer.from_pretrained('/data/nandini/vocab_adapt/codes/indic_llama_hat_m_filter/', use_fast = False)
 
 target_vocab = target_tokenizer.get_vocab()
 list_token = []
@@ -20,7 +20,7 @@ for index, token in enumerate(target_vocab):
 
 #passing the tokenized dataset
 sentences = []
-with open(f'/data-3/nandini/vocab_adapt/codes/tok_eng.txt', encoding='utf-8') as f:
+with open(f'/data/nandini/vocab_adapt/codes/tok_eng.txt', encoding='utf-8') as f:
     lines = f.readlines()
     sentences.extend(lines)
 
@@ -52,9 +52,9 @@ for i in range(1, len(word_sequence) - 1):
 
 #to initialize the matrix
 
-config = AutoConfig.from_pretrained("/data-3/nandini/vocab_adapt/codes/config_llama2/", trust_remote_code=True)
+config = AutoConfig.from_pretrained("/data/nandini/vocab_adapt/codes/config_llama2/", trust_remote_code=True)
 source_model = AutoModelForCausalLM.from_pretrained(
-    "/data-3/nandini/vocab_adapt/codes/model_llama2/",
+    "/data/nandini/vocab_adapt/codes/model_llama2/",
     config=config,
 )
 
@@ -111,8 +111,7 @@ def random_batch(data, size):
     for i in random_index:
         # one-hot encoding of words
         random_inputs.append(np.eye(voc_size)[data[i][0]])  # input  vocab (1X vocab_size)
-        random_labels.append(data[i][1])  # context word
-    
+        random_labels.append(data[i][1])  # context word  
 
     return random_inputs, random_labels
 
@@ -133,16 +132,13 @@ class Word2Vec(nn.Module):
 
         self.V = nn.Parameter(torch.tensor(V_init).float().t(), requires_grad=False)  # Convert numpy array to tensor
 
-        self.A_W = nn.Parameter(torch.rand(self.new_size, self.original_size))
-        self.A_V = nn.Parameter(torch.rand(self.new_size, self.original_size))
+        self.A_W = nn.Parameter(torch.rand(self.new_size, self.original_size), requires_grad=True)
+        self.A_V = nn.Parameter(torch.rand(self.new_size, self.original_size), requires_grad=True)
 
 
     def forward(self, X):
         X = X.float()
-        # print("self.A_W shape:", self.A_W.shape)
-        # print("self.W[:self.original_size] shape:", self.W[:self.original_size].shape)
-        # print("self.A_V shape:", self.A_V.shape)
-        # print("self.V[:, :self.original_size].t() shape:", self.V[:, :self.original_size].t().shape)
+        
         # Compute new embeddings as a combination of the original ones
         new_embeddings_W = F.softmax(self.A_W, dim=-1).mm(self.W[:self.original_size])
         new_embeddings_V = F.softmax(self.A_V, dim=-1).mm(self.V[:, :self.original_size].t())
@@ -158,29 +154,26 @@ class Word2Vec(nn.Module):
 
 model = Word2Vec(W_embeddings, V_embeddings)
 # Set the model in train mode
+
+for name, param in model.named_parameters():
+    if param.requires_grad:
+        print(name, param.shape)
+
 model.train()
+print(model)
+
+for name, param in model.named_parameters():
+    print(f"{name}: requires_grad={param.requires_grad}, grad_fn={param.grad_fn}")
 
 criterion = nn.CrossEntropyLoss() # Softmax (for multi-class classification problems) is already included
 optimizer = optim.Adam(model.parameters(), lr=0.001)
-
-# frozen_tokens = []
-# tokens_to_freeze = []
-# for index, token in enumerate(source_vocab):
-#     frozen_tokens.append(token)
-#     tokens_to_freeze.append(word_dict[token])
-
-# W_mask = torch.ones_like(model.W)
-# V_mask = torch.ones_like(model.V)
-# for index in tokens_to_freeze:
-#     W_mask[index] = 0
-#     V_mask[:, index] = 0  #As it is transposed
-
 
 # Training
 for epoch in range(1):
     total_loss = 0
     # Loop through the entire dataset in batches
     for i in range(0, len(skip_grams), batch_size):
+        print("in nested for loop i is: ", i)
         # Generate a batch of data
         input_batch, target_batch = random_batch(skip_grams[i:i+batch_size], batch_size)
 
@@ -191,17 +184,26 @@ for epoch in range(1):
         # Zero gradients
         optimizer.zero_grad()
 
+        print("after optimizer.zero grad")
         # Forward pass
         output = model(input_batch)
 
+        print("after output = model(input_batch)")
+
         # Compute loss
         loss = criterion(output, target_batch)
+        print("Loss grad_fn:", loss.grad_fn)
+        # loss.requires_grad = True
+
+        print("after defining loss")
         total_loss += loss.item()
+
+        print("after train_lkoss = loss.item()")
 
         # Backward pass and optimize
         loss.backward()
-        # model.W.grad *= W_mask
-        # model.V.grad *= V_mask
+
+        print("after loss_backward()")
         optimizer.step()
         print("after 1 batch")
 
