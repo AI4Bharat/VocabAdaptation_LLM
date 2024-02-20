@@ -4,4 +4,4 @@
 4. Run Sentencepiece_extractor.py file to extract the vocab.json and merges.text file from the en-indic tokenizer(from step3)
 5. Run create_tokenizerJson.py file to get tokenizer.json file, save this file to the same directory as created in step3
 
-Now the tokenizer can be loaded using AutoTokenizer and llamatokenizer (Hugging face API)
+Now the tokenizer can be loaded using AutoTokenizer with the argument use_fast = False , and llamatokenizer (Hugging face API)
