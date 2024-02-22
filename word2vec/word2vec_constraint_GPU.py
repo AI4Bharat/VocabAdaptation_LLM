@@ -5,12 +5,15 @@ import torch.optim as optim
 from torch.autograd import Variable
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, LlamaTokenizer
 import torch.nn.functional as F
+from accelerate import Accelerator
+
+accelerator = Accelerator()
 # import matplotlib.pyplot as plt
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Running on: {device}")
-dtype = torch.float
+# dtype = torch.float
 
 #to create vocabulary and the input data
 source_tokenizer = AutoTokenizer.from_pretrained('/data/nandini/vocab_adapt/codes/llama_tokenizer')
@@ -84,6 +87,9 @@ print("embedding size is: ", embedding_size)
 W_embeddings = source_matrix_emb
 V_embeddings = source_matrix_lmhead
 
+del source_model
+torch.cuda.empty_cache()
+
 
 
 def random_batch(data, size):    #size is batch size, data is list of input and target word list
@@ -112,8 +118,8 @@ class Word2Vec(nn.Module):
         self.new_size = 31199
         self.factorized_dim = 1024
         
-        self.W_original = nn.Parameter(torch.tensor(W_init).float(), requires_grad=False)  #torch.Size([32000, 4096])
-        self.V_original = nn.Parameter(torch.tensor(V_init).float(), requires_grad=False) #torch.Size([32000, 4096])
+        self.W_original = nn.Parameter(torch.tensor(W_init), requires_grad=False)  #torch.Size([32000, 4096])
+        self.V_original = nn.Parameter(torch.tensor(V_init), requires_grad=False) #torch.Size([32000, 4096])
 
         # Learnable transformation matrices, now factorized to a lower dimension
         self.A_W_1 = nn.Parameter(torch.rand(self.new_size, self.factorized_dim), requires_grad=True)  # torch.Size([31199, 1024])
@@ -127,7 +133,7 @@ class Word2Vec(nn.Module):
 
 
     def forward(self, X):
-        X = X.float()    #torch.Size([16, 63199]) batch_size = 16
+        X = X.half()    #torch.Size([16, 63199]) batch_size = 16
 
         #multiplying the factorized
         # A_W = self.A_W_1.mm(self.A_W_2)
@@ -160,7 +166,8 @@ class Word2Vec(nn.Module):
         output_layer = torch.matmul(hidden_layer, self.combined_V.t())       #torch.Size([20, 63199])
         return output_layer
 
-model = Word2Vec(W_embeddings, V_embeddings).to(device)
+model = Word2Vec(W_embeddings, V_embeddings)
+model = model.to(device).half()
 
 
 
@@ -201,7 +208,7 @@ for epoch in range(3):
        
 
         # Convert to tensors
-        input_batch = torch.tensor(np.array(input_batch)).to(device)       #torch.Size([16, 63199])
+        input_batch = torch.tensor(np.array(input_batch)).to(device).half()      #torch.Size([16, 63199])
         target_batch = torch.tensor(np.array(target_batch, dtype=np.int64)).to(device)      #torch.Size([16])
   
         # Zero gradients
