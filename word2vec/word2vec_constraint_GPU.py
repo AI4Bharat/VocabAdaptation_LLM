@@ -6,6 +6,9 @@ from torch.autograd import Variable
 from transformers import AutoTokenizer, AutoConfig, AutoModelForCausalLM, LlamaTokenizer
 import torch.nn.functional as F
 from accelerate import Accelerator
+from torch.utils.data import Dataset, DataLoader
+import torch
+import numpy as np
 
 accelerator = Accelerator()
 # import matplotlib.pyplot as plt
@@ -92,19 +95,44 @@ torch.cuda.empty_cache()
 
 
 
-def random_batch(data, size):    #size is batch size, data is list of input and target word list
-    random_inputs = []
-    random_labels = []
-    random_index = np.random.choice(range(len(data)), size, replace=False)   #to shuffle the input
+# def random_batch(data, size):    #size is batch size, data is list of input and target word list
+#     random_inputs = []
+#     random_labels = []
+#     random_index = np.random.choice(range(len(data)), size, replace=False)   #to shuffle the input
 
-    for i in random_index:
-        # one-hot encoding of words
-        random_inputs.append(np.eye(voc_size)[data[i][0]])  # input  vocab (1X vocab_size) one-hot vector
-        random_labels.append(data[i][1])  # context word  
+#     for i in random_index:
+#         # one-hot encoding of words
+#         random_inputs.append(np.eye(voc_size)[data[i][0]])  # input  vocab (1X vocab_size) one-hot vector
+#         random_labels.append(data[i][1])  # context word  
 
-    return random_inputs, random_labels
+#     return random_inputs, random_labels
+
+class SkipGramDataset(Dataset):
+    def __init__(self, skip_grams, voc_size):
+        self.skip_grams = skip_grams
+        self.voc_size = voc_size
+    
+    def __len__(self):
+        return len(self.skip_grams)
+    
+    def __getitem__(self, idx):
+        input_word_index = self.skip_grams[idx][0]
+        context_word_index = self.skip_grams[idx][1]
+
+        # One-hot encoding for the input word
+        input_vector = np.eye(self.voc_size)[input_word_index]
+        input_vector = torch.tensor(input_vector, dtype=torch.float32)
+
+        return input_vector, context_word_index
 
 
+print("before skipgramdataset")
+
+dataset = SkipGramDataset(skip_grams=skip_grams, voc_size=voc_size)
+print("before dataloader")
+data_loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
+
+print("after dataloader")
 
 # inputs: like , i, dog , context: i, dog, i
 
@@ -168,9 +196,13 @@ class Word2Vec(nn.Module):
 
 model = Word2Vec(W_embeddings, V_embeddings)
 model = model.to(device).half()
+criterion = nn.CrossEntropyLoss() # Softmax (for multi-class classification problems) is already included
+optimizer = optim.Adam(model.parameters(), lr=0.0005)
 
 
 
+
+print("start training")
 # Set the model in train mode
 model.train()
 
@@ -178,8 +210,6 @@ model.train()
 for name, param in model.named_parameters():
     print(f"{name}: requires_grad={param.requires_grad}, grad_fn={param.grad_fn}")
 
-criterion = nn.CrossEntropyLoss() # Softmax (for multi-class classification problems) is already included
-optimizer = optim.Adam(model.parameters(), lr=0.001)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
@@ -197,25 +227,18 @@ for name, p in model.named_parameters():
 
 # Training
 for epoch in range(3):
+    print("in epoch 1")
     total_loss = 0
     # Loop through the entire dataset in batches
-    for i in range(0, len(skip_grams), batch_size):
-        if i % 10000 == 0:
-            print("in nested for loop i is: ", i)
-        
-        # Generate a batch of data
-        input_batch, target_batch = random_batch(skip_grams[i:i+batch_size], batch_size)
-       
-
-        # Convert to tensors
-        input_batch = torch.tensor(np.array(input_batch)).to(device).half()      #torch.Size([16, 63199])
-        target_batch = torch.tensor(np.array(target_batch, dtype=np.int64)).to(device)      #torch.Size([16])
-  
+    batch_counter = 0
+    for input_batch, target_batch in data_loader:
+        target_batch = target_batch.to(device, dtype=torch.long)
+          
         # Zero gradients
         optimizer.zero_grad(set_to_none=True)
 
         # Forward pass
-        output = model(input_batch)
+        output = model(input_batch.to(device).half())
         # _, predicted_classes = torch.max(output, 1)
         # print("predicted class is::::::::::: ")
         # print(predicted_classes)
@@ -224,11 +247,13 @@ for epoch in range(3):
         loss = criterion(output, target_batch)
         # print("Loss grad_fn:", loss.grad_fn)
         # loss.requires_grad = True
-
         total_loss += loss.item()
         # Backward pass and optimize
         loss.backward()
         optimizer.step()
+        if batch_counter % 100 == 0:
+            print(f"Epoch: {epoch+1}, Step: {batch_counter}, Loss: {loss.item()}")
+        batch_counter += 1
 
     #to save final embedding after each layer
     torch.save(model.combined_W, f'/data/nandini/vocab_adapt/codes/word2vec_weights/combined_W_epoch_{epoch}_1.pt')
