@@ -194,7 +194,7 @@ class Word2Vec(nn.Module):
         return output_layer
 
 model = Word2Vec(W_embeddings, V_embeddings)
-optimizer = optim.Adam(model.parameters(), lr=0.0005)
+optimizer = optim.Adam(model.parameters(), lr=0.0000005)
 data_loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 model, optimizer, data_loader = accelerator.prepare(model, optimizer, data_loader)
 
