@@ -27,7 +27,7 @@ import transformers
 
 
 parser.add_argument("--wordEmbTrain", default="true", help = "[true | false]")
-parser.add_argument("--run_name", default="config_indicllama_IR_wechsel")
+parser.add_argument("--run_name", default="indicllama_wechsel_10_4")
 parser.add_argument('--model_config', default="/data/nandini/vocab_adapt/codes/config_indicllama_IR_wechsel/", type=str)
 parser.add_argument('--model_path', default="/data/nandini/vocab_adapt/codes/model_indicllama_IR_wechsel/", type=str)
 parser.add_argument('--tokenizer_path', default="/data/nandini/vocab_adapt/codes/indic_llama_hat_m_filter", type=str)
@@ -43,7 +43,7 @@ model_kwargs = {"device_map": "auto"}
 model = AutoModelForCausalLM.from_pretrained(
     args.model_path,
     config=config,
-    #   load_in_8bit=True, 
+    # load_in_8bit=True, 
     # torch_dtype=torch.bfloat16, # Load model weights in bfloat16
     trust_remote_code=True, **model_kwargs
 )
@@ -136,20 +136,25 @@ def group_texts(examples):
     result["labels"] = result["input_ids"].copy()
     return result
 
-block_size = 2048
+block_size = 1024
 
-text_path =  "/data/nandini/vocab_adapt/codes/lora_train_data_30M.txt"
+text_path =  "/data/nandini/vocab_adapt/codes/lora_train_data_10M.txt"
 dataset = load_dataset("text", data_files=text_path)
 print(dataset)
+print("starting second map")
 # dataset = dataset.map(lambda samples: tokenizer(dataset['train']['text']), batched=True)
 tokenized_dataset = dataset['train'].map(
         preprocess_function,
         batched=True,
         remove_columns=dataset["train"].column_names
     )
+print("after tokenized map")
+print("starting second map")
 lm_dataset = tokenized_dataset.map(group_texts, batched=True)
+print("after second group text map")
 tokenizer.pad_token = tokenizer.eos_token
 # model = DataParallel(model)
+print("trainer")
 trainer = transformers.Trainer(
     model=model, 
     train_dataset=  lm_dataset, # dataset['train'],
@@ -159,18 +164,21 @@ trainer = transformers.Trainer(
         warmup_ratio=0.1, 
         # max_steps=200, 
         learning_rate=2e-4, 
-        num_train_epochs=5,
+        num_train_epochs=3,
         fp16=True,
-        logging_strategy= 'epoch', 
+        logging_strategy='steps',
+        logging_steps=50, 
         save_strategy="epoch",
-        output_dir=args.run_name
+        output_dir= f"checkpoint_{args.run_name}",
+        report_to="wandb"
     ),
     data_collator=transformers.DataCollatorForLanguageModeling(tokenizer, mlm=False)
 )
-model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
+# model.config.use_cache = False  # silence the warnings. Please re-enable for inference!
+print("starting training")
 trainer.train()
 
-model.config.use_cache = True
+# model.config.use_cache = True
 
 
 
