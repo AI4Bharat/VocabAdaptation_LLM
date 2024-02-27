@@ -8,6 +8,7 @@ import torch.nn.functional as F
 from accelerate import Accelerator
 from torch.utils.data import Dataset, DataLoader
 import torch
+from torch.cuda.amp import GradScaler, autocast
 import numpy as np
 
 accelerator = Accelerator()
@@ -193,8 +194,10 @@ class Word2Vec(nn.Module):
         output_layer = torch.matmul(hidden_layer, self.combined_V.t())       #torch.Size([20, 63199])
         return output_layer
 
+
+scaler = GradScaler()
 model = Word2Vec(W_embeddings, V_embeddings)
-optimizer = optim.Adam(model.parameters(), lr=0.0000005)
+optimizer = optim.Adam(model.parameters(), lr=0.005, weight_decay=0.01,)
 data_loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
 model, optimizer, data_loader = accelerator.prepare(model, optimizer, data_loader)
 
@@ -212,6 +215,10 @@ model.train()
 for name, param in model.named_parameters():
     print(f"{name}: requires_grad={param.requires_grad}, grad_fn={param.grad_fn}")
 
+def copy_model_weights(model):
+    return {name: param.data.clone() for name, param in model.named_parameters()}
+
+initial_weights = copy_model_weights(model)
 
 trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
@@ -239,29 +246,50 @@ for epoch in range(3):
         # Zero gradients
         optimizer.zero_grad(set_to_none=True)
 
+        with autocast():
+            output = model(input_batch)
+            loss = criterion(output, target_batch)
+
         # Forward pass
-        output = model(input_batch)
+        # output = model(input_batch)
         # _, predicted_classes = torch.max(output, 1)
         # print("predicted class is::::::::::: ")
         # print(predicted_classes)
         
         # Compute loss
-        loss = criterion(output, target_batch)
+        # loss = criterion(output, target_batch)
 
         if torch.isnan(loss):
             accelerator.print(f"NaN loss detected at Epoch: {epoch+1}, Step: {batch_counter}")
+            continue
             
-        accelerator.backward(loss)
+        scaler.scale(loss).backward()
+        # Step with scaler
+        scaler.step(optimizer)
+        scaler.update()
+        optimizer.zero_grad()
         # print("Loss grad_fn:", loss.grad_fn)
         # loss.requires_grad = True
         total_loss += loss.item()
         # Backward pass and optimize
         # loss.backward()
-        optimizer.step()
-        if batch_counter % 1000 == 0:
-            accelerator.print(f"Epoch: {epoch+1}, Step: {batch_counter}, Loss: {loss.item()}")
+        # optimizer.step()
         batch_counter += 1
-
+        if batch_counter % 100 == 0:
+            accelerator.print(f"Epoch: {epoch+1}, Step: {batch_counter}, Loss: {loss.item()}")
+            print("in nested for loop i is: ", i)
+            # weights_after_100_steps = copy_model_weights(model)
+            # break
+        
+    # for name, initial_param in initial_weights.items():
+    #     print("in check condition name is: ", name, " initial_param is: ", initial_param)
+    #     weights_equal = torch.equal(weights_after_100_steps[name], initial_param)
+    #     if weights_equal:
+    #         print(f"Weights in {name} have not changed after 100 steps.")
+    #     else:
+    #         print(f"Weights in {name} have changed after 100 steps.")
+    
+    # break
     #to save final embedding after each layer
     if accelerator.is_main_process:
         torch.save(model.combined_W, f'/data/nandini/vocab_adapt/codes/word2vec_weights/combined_W_epoch_{epoch}_1.pt')
