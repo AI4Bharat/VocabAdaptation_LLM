@@ -8,7 +8,12 @@ import torch.nn.functional as F
 from accelerate import Accelerator
 from torch.utils.data import Dataset, DataLoader
 import torch
+from torch.cuda.amp import GradScaler, autocast
 import numpy as np
+import time
+import random
+from collections import Counter
+
 
 accelerator = Accelerator()
 # import matplotlib.pyplot as plt
@@ -28,48 +33,6 @@ list_token = []
 for index, token in enumerate(target_vocab):
     list_token.append(token)
 
-#passing the tokenized dataset
-sentences = []
-with open(f'/data/nandini/vocab_adapt/codes/tokenized_dataset/code_mix_data_tokenization_40M.txt', encoding='utf-8') as f:
-    lines = f.readlines()
-    sentences.extend(lines)
-
-
-# list all the words present in our corpus
-word_sequence = " ".join(sentences).split()
-
-word_list = list_token
-word_dict = {w: i for i, w in enumerate(word_list)}  #create dictionary word:index
-
-####sanity check that every token correspond to the same tokenid in the matrix
-for token, token_id in target_tokenizer.get_vocab().items():
-    if token_id != word_dict[token]:
-        print(token)
-
-print("there is no such token")
-
-
-# Word2Vec Parameter
-batch_size = 8
-embedding_size = 4096  
-voc_size = len(word_list)
-
-# defined the context
-context_size = 1
-
-skip_grams = []
-for i in range(1, len(word_sequence) - 1):
-    input = word_dict[word_sequence[i]]  #index of word
-    #if want to change context size then this below line need to be changed
-    context = [word_dict[word_sequence[i - 1]], word_dict[word_sequence[i + 1]]]     #index of neighboring word
-
-    for w in context:
-        skip_grams.append([input, w])      #skipgram append input , predicted
-
-
-# np.random.seed(172)
-
-#to initialize the matrix
 
 config = AutoConfig.from_pretrained("/data/nandini/vocab_adapt/codes/config_llama2/", trust_remote_code=True)
 source_model = AutoModelForCausalLM.from_pretrained(
@@ -77,6 +40,7 @@ source_model = AutoModelForCausalLM.from_pretrained(
     config=config,
 )
 
+embedding_size = 4096  
 
 # embedding_size = source_model.get_input_embeddings().weight.shape[0]
 source_matrix_emb = source_model.get_input_embeddings().weight.detach().numpy().copy()
@@ -95,46 +59,110 @@ torch.cuda.empty_cache()
 
 
 
-# def random_batch(data, size):    #size is batch size, data is list of input and target word list
-#     random_inputs = []
-#     random_labels = []
-#     random_index = np.random.choice(range(len(data)), size, replace=False)   #to shuffle the input
+class Word2VecDataset(object):
+    def __init__(self, corpus, list_token, min_count=1, window_size=5, threshold=3):
+        """ Prepares the training data for the word2vec neural network.
+            Params:
+                corpus (string): corpus of words
+                min_count (int): words with minimum occurrence to consider
+                window_size (int): context window size for generating word pairs
+                threshold (float): threshold used for subsampling words
+        """
+        self.window_size = window_size
+        self.min_count = min_count
+        self.threshold = threshold
 
-#     for i in random_index:
-#         # one-hot encoding of words
-#         random_inputs.append(np.eye(voc_size)[data[i][0]])  # input  vocab (1X vocab_size) one-hot vector
-#         random_labels.append(data[i][1])  # context word  
+        tokens = corpus.split()
+        word_counts = Counter(tokens)
+        word_counts = Counter({word:count for word, count in word_counts.items() if count >= min_count})        
+        word_list = list_token
+        self.word2idx = {word: idx for idx, word in enumerate(word_list)}
+        self.idx2word = {idx: word for word, idx in self.word2idx.items()}
+        word_freq = np.zeros(len(self.word2idx))
+        for word, count in word_counts.items():
+            if word in self.word2idx:  # Ensure the word is in the tokenizer's vocabulary
+                idx = self.word2idx[word]
+                word_freq[idx] = count
 
-#     return random_inputs, random_labels
+        # create prob dist based on word frequency
+        self.unigram_dist = word_freq / word_freq.sum()
+        # create prob dist for negative sampling
+        self.noise_dist = self.unigram_dist ** 0.75
+        self.noise_dist = self.noise_dist / self.noise_dist.sum()
 
-class SkipGramDataset(Dataset):
-    def __init__(self, skip_grams, voc_size):
-        self.skip_grams = skip_grams
-        self.voc_size = voc_size
+        # get prob for drop words
+        self.word_drop_prob = np.zeros(len(self.word2idx))
+        for word, idx in self.word2idx.items():
+            if word_freq[idx] > 0:  
+                prob = 1 - np.sqrt(threshold / word_freq[idx])
+                self.word_drop_prob[idx] = min(prob, 1.0) 
+            else:
+                self.word_drop_prob[idx] = 0  # Set drop probability to 0 for words not in corpus
+                    
+        self.generate_word_pairs()
     
-    def __len__(self):
-        return len(self.skip_grams)
+
+    def generate_word_pairs(self):
+        """ Creates the pairs of center and context words based on the context window size.
+        """
+        word_pair_ids = []
+        lines = corpus.split('\n')
+        for line in lines:
+            tokens_l = line.split()
+            token_ids = [self.word2idx.get(word, -1) for word in tokens_l]
+            for current_idx, center_word_id in enumerate(token_ids):
+                if center_word_id == -1:
+                    continue
+                
+                if random.random() > self.word_drop_prob[center_word_id]:
+                    left_boundary = max(current_idx - self.window_size, 0)
+                    right_boundary = min(current_idx + self.window_size + 1, len(token_ids))
+                    for context_position in range(left_boundary, right_boundary):
+                        if context_position != current_idx: 
+                            context_word_id = token_ids[context_position]
+                            if context_word_id == -1:
+                                continue
+                            word_pair_ids.append((center_word_id, context_word_id))
+        
+        print("length of word pairs is: ", len(word_pair_ids))
+        
+        self.word_pair_ids = word_pair_ids
+
+    def get_batches(self, batch_size):
+        """ Creates the batches for training the network.
+            Params:
+                batch_size (int): size of the batch
+            Returns:
+                batch (torch tensor of shape (batch_size, 2)): tensor of word pair ids for a given batch
+        """
+        for i in range(0, len(self.word_pair_ids), batch_size):
+            yield torch.tensor(self.word_pair_ids[i: i+batch_size], dtype=torch.long)
     
-    def __getitem__(self, idx):
-        input_word_index = self.skip_grams[idx][0]
-        context_word_index = self.skip_grams[idx][1]
+    
+    def get_negative_samples(self, batch_size, n_samples):
+        """ Samples negative word ids for a given batch.
+            Params:
+                batch_size (int): size of the batch
+                n_samples (int): number of negative samples
+            Returns:
+                neg_samples (torch tensor of shape (batch_size, n_samples)): tensor of negative sample word ids
+                    for a given batch
+        """
+        neg_samples_ids = np.random.choice(len(self.word2idx), size=(batch_size, n_samples), 
+                                       replace=False, p=self.noise_dist)
+        return torch.tensor(neg_samples_ids, dtype=torch.long)
 
-        # One-hot encoding for the input word
-        input_vector = np.eye(self.voc_size)[input_word_index]
-        input_vector = torch.tensor(input_vector, dtype=torch.float32)
-
-        return input_vector, context_word_index
 
 
-print("before skipgramdataset")
+with open(f'/data/nandini/vocab_adapt/codes/tokenized_dataset/code_mix_data_tokenization_4M.txt', encoding='utf-8') as f:
+    corpus = f.read()
 
-dataset = SkipGramDataset(skip_grams=skip_grams, voc_size=voc_size)
-print("before dataloader")
-data_loader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4)
+dataset = Word2VecDataset(corpus, list_token)
 
-print("after dataloader")
 
-# inputs: like , i, dog , context: i, dog, i
+# Word2Vec Parameter
+vocab_size = len(list_token)
+print("vocab size is: ", vocab_size, " len according to dataset is: ", len(dataset.word2idx))
 
 
 # Model
@@ -160,105 +188,100 @@ class Word2Vec(nn.Module):
         self.combined_V = None
 
 
-    def forward(self, X):
-        X = X.half()    #torch.Size([16, 63199]) batch_size = 16
-
-        #multiplying the factorized
-        # A_W = self.A_W_1.mm(self.A_W_2)
-        # A_V = self.A_V_1.mm(self.A_V_2)
-
+    def forward(self, in_ids, pos_out_ids, neg_out_ids):
+        
         A_W = torch.matmul(self.A_W_1, self.A_W_2)
         A_V = torch.matmul(self.A_V_1, self.A_V_2)
-
-        
         # F.softmax(self.A_W, dim=-1) represents the probability score, and W_original represents the original embedding. 
         # Thus, the result is a linear combination of the original embedding, weighted by the probability score.
         # Here, new_embedding is actually the embedding of the newly added token, with 31,199 new tokens added.
-
         new_embeddings_W = F.softmax(A_W, dim=-1).mm(self.W_original)  #torch.Size([31199, 4096])
         new_embeddings_V = F.softmax(A_V, dim=-1).mm(self.V_original)  #torch.Size([31199, 4096])
-
-
         # We are concatenating the final new embedding, which is the original embedding plus the embedding of the new token. 
         # This combined_W represents the word embedding layer of the final model.
-
         self.combined_W = torch.cat((self.W_original, new_embeddings_W), dim=0)  #torch.Size([63199, 4096])
         self.combined_V = torch.cat((self.V_original, new_embeddings_V), dim=0)  #torch.Size([63199, 4096])
-
         
-        # Compute the hidden layer and output using the combined embeddings. 
-        # The output is the embedding from the word embedding layer
-        hidden_layer = torch.matmul(X, self.combined_W)      #torch.Size([20, 4096])
+        emb_in = self.combined_W[in_ids]
+        pos_emb_out = self.combined_V[pos_out_ids]
+        neg_emb_out = self.combined_V[neg_out_ids]
 
-        #output of lmhead layer
-        output_layer = torch.matmul(hidden_layer, self.combined_V.t())       #torch.Size([20, 63199])
-        return output_layer
+        # calculate loss for true pair
+        # ----------------------------
+        # step 1 is calculate the dot product between the input and output word embeddings
+        pos_loss = torch.mul(pos_emb_out, emb_in)      # element-wise multiplication
+        pos_loss = torch.sum(pos_loss, dim=1)           # sum the element-wise components
+        
+        # step 2 is to calculate the log sogmoid of dot product
+        pos_loss = -F.logsigmoid(pos_loss)
 
-model = Word2Vec(W_embeddings, V_embeddings)
-model = model.to(device).half()
-criterion = nn.CrossEntropyLoss() # Softmax (for multi-class classification problems) is already included
-optimizer = optim.Adam(model.parameters(), lr=0.0005)
+        # calculate loss for negative pairs
+        # ----------------------------------
+        # step 1 is calculate the dot product between the input and output word embeddings
+        neg_loss = torch.bmm(neg_emb_out, emb_in.unsqueeze(2)).squeeze()   # matrix-matrix multiplication
+        neg_loss = torch.sum(neg_loss, dim=1)                               # sum the element-wise components
 
+        # step 2 is to calculate the log sogmoid of dot product
+        neg_loss = -F.logsigmoid(-neg_loss)
 
+        return torch.mean(pos_loss + neg_loss)
+        
 
+scaler = GradScaler()
+model = Word2Vec(W_embeddings, V_embeddings).to(device)
+optimizer = optim.Adam(model.parameters(), lr=0.0003)
 
-print("start training")
-# Set the model in train mode
-model.train()
+n_epochs = 5
+n_neg_samples = 5
+batch_size = 1024
 
-#sanity check
-for name, param in model.named_parameters():
-    print(f"{name}: requires_grad={param.requires_grad}, grad_fn={param.grad_fn}")
-
-
-trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
-non_trainable_params = sum(p.numel() for p in model.parameters() if not p.requires_grad)
-
-# Total number of trainable parameters: 1996736000
+# Total number of trainable parameters: 129431552
 # Total number of non-trainable parameters: 262144000
 
-print(f"Total number of trainable parameters: {trainable_params}")
-print(f"Total number of non-trainable parameters: {non_trainable_params}")
+print("-" * 60)
+print("Start of training")
+print("-" * 60)
 
-for name, p in model.named_parameters():
-    if p.requires_grad:
-        print(f"{name}: shape={p.shape}")
+for epoch in range(n_epochs):
+    losses = []
+    start = time.time()
+    bt = 0
 
+    for batch in dataset.get_batches(batch_size):
+        # get the negative samples
+        noise_word_ids = dataset.get_negative_samples(len(batch), n_neg_samples)
 
-# Training
-for epoch in range(3):
-    print("in epoch 1")
-    total_loss = 0
-    # Loop through the entire dataset in batches
-    batch_counter = 0
-    for input_batch, target_batch in data_loader:
-        target_batch = target_batch.to(device, dtype=torch.long)
-          
-        # Zero gradients
-        optimizer.zero_grad(set_to_none=True)
-
-        # Forward pass
-        output = model(input_batch.to(device).half())
-        # _, predicted_classes = torch.max(output, 1)
-        # print("predicted class is::::::::::: ")
-        # print(predicted_classes)
+        # load tensor to GPU
+        input_word_ids = batch[:, 0].to(device)
+        target_word_ids = batch[:, 1].to(device)
+        noise_word_ids = noise_word_ids.to(device)
         
-        # Compute loss
-        loss = criterion(output, target_batch)
-        # print("Loss grad_fn:", loss.grad_fn)
-        # loss.requires_grad = True
-        total_loss += loss.item()
-        # Backward pass and optimize
+        # forward pass
+        loss = model.forward(input_word_ids, target_word_ids, noise_word_ids)
+
+        # backward pass, optimize
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if batch_counter % 100 == 0:
-            print(f"Epoch: {epoch+1}, Step: {batch_counter}, Loss: {loss.item()}")
-        batch_counter += 1
 
-    #to save final embedding after each layer
-    torch.save(model.combined_W, f'/data/nandini/vocab_adapt/codes/word2vec_weights/combined_W_epoch_{epoch}_1.pt')
-    torch.save(model.combined_V, f'/data/nandini/vocab_adapt/codes/word2vec_weights/combined_V_epoch_{epoch}_1.pt')
-    # Print average loss per epoch
-    print('Epoch:', '%04d' % (epoch + 1), 'cost =', '{:.6f}'.format(total_loss / (len(skip_grams) // batch_size)))
+        losses.append(loss.item())
+
+        
+        if bt % 1000 == 0:
+            print("in epoch: ", epoch, " batch is: ", bt, f" Avg training loss: {np.mean(losses):.6f}")
+        
+        bt += 1
 
     
+    end = time.time()
+
+    print(f"Epochs: {epoch + 1}/{n_epochs}\tAvg training loss: {np.mean(losses):.6f}\tEllapsed time: {(end - start):.0f} s")
+    torch.save(model.combined_W, f'/data/nandini/vocab_adapt/codes/word2vec_weights/combined_W_epoch_{epoch}_1_03_3.pt')
+    torch.save(model.combined_V, f'/data/nandini/vocab_adapt/codes/word2vec_weights/combined_V_epoch_{epoch}_1_03_3.pt')
+
+print("-" * 60)
+print("End of training")
+print("-" * 60)
+
+
+
