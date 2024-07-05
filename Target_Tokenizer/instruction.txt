@@ -1,0 +1,7 @@
+1. Get the tokenizer training data
+2. Run sentencepiece_training.py that trains sentencepiece tokenizer
+3. Run llama_merge_vocab.py that merges the vocab of llama tokenizer and trained indic-tokenizer(2 step)
+4. Run Sentencepiece_extractor.py file to extract the vocab.json and merges.text file from the en-indic tokenizer(from step3)
+5. Run create_tokenizerJson.py file to get tokenizer.json file, save this file to the same directory as created in step3
+
+Now the tokenizer can be loaded using AutoTokenizer with the argument use_fast = False , and llamatokenizer (Hugging face API)
