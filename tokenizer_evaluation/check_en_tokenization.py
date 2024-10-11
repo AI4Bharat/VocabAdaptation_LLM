@@ -46,9 +46,7 @@ with open(text_path,'r', encoding='utf-8' ) as file:
                 cnt +=1
             else:
                 print("Test text:\n",w)
-                # print(f"Tokenized by LLaMA tokenizer: ", llama_tok_res)
-                # print(f"Tokenized by indic-LLaMA tokenizer: ",indicllama_tok_res )
-        
+               
     if args.evaluation_type == "sentence":
         print("in sentece")  
         for text in data:
