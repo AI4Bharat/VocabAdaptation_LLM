@@ -1,7 +1,3 @@
-# #Command used to run the given file
-# python sentencepiece_extractor.py --provider "sentencepiece" --model "/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/indic_llama_sp_m_filter/indic_llama.model" --vocab-output-path "/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/tmp_dir_sentecepiece/vocab.json" --merges-output-path "/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/tmp_dir_sentecepiece/merges.txt"
-
-
 
 from argparse import ArgumentParser
 from json import dump
