@@ -22,11 +22,11 @@ base_tokenizer =  AutoTokenizer.from_pretrained("./llama_fast_tokenizer/")
 print("length of indic tokenizer: ", len(indic_tokenizer))
 print("length of llama tokenizer: ", len(base_tokenizer))
 
-for folder in os.listdir("/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/seed_train_test/"):
+for folder in os.listdir("/nandini/vocab_adap/seed_train_test/"):
     list_base = []
     list_extended = []
     print(folder)
-    text_path = f"/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/seed_train_test/{folder}/test.{folder[-8:]}"
+    text_path = f"/nandini/vocab_adap/seed_train_test/{folder}/test.{folder[-8:]}"
     
     with open(text_path,'r', encoding='utf-8' ) as file:
         data = file.readlines()
