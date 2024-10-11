@@ -13,7 +13,6 @@ import wandb
 import os
 
 
-#os.environ["WANDB_MODE"] = "offline"
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=42)
@@ -34,26 +33,10 @@ path_dir = args.model_path
 child_dir = os.path.basename(path_dir)
 parent_path = os.path.dirname(path_dir)
 parent_dir = os.path.basename(parent_path)
-    # parts = path_dir.split(os.sep)
-    # desired_parts = parts[-3:]
-    # parent_parent_dir = desired_parts[0]
-    # parent_dir = desired_parts[1]
-    # child_dir = desired_parts[2]
-    # run_name = f"{parent_parent_dir}_{parent_dir}_{child_dir}"
 
 # parent_dir = "initialized"
 run_name = f"{parent_dir}_{child_dir}"
-# run_name = os.path.basename(args.model_path)
 
-# parts = args.model_path.split(os.sep)
-# variant_checkpoint = parts[-2]
-# variant_part = variant_checkpoint.split('_')[-2]  # splits and gets 'univariate'
-# checkpoint_part = variant_checkpoint.split('_')[-1]  # splits and gets 'checkpoint-80000'
-
-# # parts = args.model_path.split('_')
-# # variant = parts[3]  # 'multivariate' is expected to be the fourth element
-# # checkpoint = parts[-1] 
-# run_name = f"{variant_part}_{checkpoint_part}"
 id2label= {0: "entailment", 1: "neutral", 2: "contradiction"}
 label2id = {"entailment":0, "neutral": 1, "contradiction":2 }
 
