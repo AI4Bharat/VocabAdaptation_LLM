@@ -6,7 +6,7 @@ import sentencepiece as spm
 import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--llama_tokenizer_dir', default="llama_fast_tokenizer", type=str)
-parser.add_argument('--indic_sp_model_file', default='/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/sp_indic.model', type=str)
+parser.add_argument('--indic_sp_model_file', default='/nandini/vocab_adap/sp_indic.model', type=str)
 parser.add_argument('--evaluation_type', default="word", type=str, help="word||sentence")
 args = parser.parse_args()
 
