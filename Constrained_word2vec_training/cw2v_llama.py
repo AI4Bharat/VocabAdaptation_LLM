@@ -45,20 +45,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 source_tokenizer = AutoTokenizer.from_pretrained('/data/nandini/vocab_adapt/codes/llama_tokenizer')
 target_tokenizer = AutoTokenizer.from_pretrained('/data/nandini/vocab_adapt/codes/BERT/extended_llama_hf_m_filter/', use_fast = True)
 
-# # Retrieve the vocabularies
-# source_vocab = source_tokenizer.get_vocab()
-# target_vocab = target_tokenizer.get_vocab()
 
-# Check if the first 32,000 tokens are the same
-# tokens_match = True
-# for token, index in source_vocab.items():
-#     if index >= 32000:
-#         break
-#     if token not in target_vocab or target_vocab[token] != index:
-#         tokens_match = False
-#         break
-
-# print(f"First 32,000 tokens are the same: {tokens_match}")
 
 #creates list of token
 target_vocab = target_tokenizer.get_vocab()
