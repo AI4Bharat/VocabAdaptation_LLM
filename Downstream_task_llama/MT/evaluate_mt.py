@@ -10,9 +10,6 @@ from transformers import AutoTokenizer, AutoModelForCausalLM, LlamaTokenizer, Ll
 from datasets import load_dataset, DatasetDict
 from sacrebleu import sentence_bleu, corpus_bleu, sentence_chrf, corpus_chrf
 from tqdm import tqdm
-# from langcode2name import language_mapping
-# from attack import apply_attack
-# from utils import jaccard
 
 language_mapping = {
     "hin_Deva": "Hindi",
@@ -24,10 +21,9 @@ language_mapping = {
 
 def initialize_model_and_tokenizer(args):
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer_name_or_path)
-    # config = AutoConfig.from_pretrained(args.config_name_or_path, trust_remote_code=True)
+    
     model = AutoModelForCausalLM.from_pretrained(
         args.model_name_or_path,
-        # config=config,
         trust_remote_code=True,
         low_cpu_mem_usage=True,
         torch_dtype=torch.bfloat16,
