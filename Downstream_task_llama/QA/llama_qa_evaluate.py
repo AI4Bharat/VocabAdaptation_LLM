@@ -182,10 +182,6 @@ def main(args):
 
     run.finish()
 
-    # save results
-    # with open(os.path.join(args.save_dir, "metrics.json"), "w") as fout:
-    #     json.dump(metrics, fout, indent=4)
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
