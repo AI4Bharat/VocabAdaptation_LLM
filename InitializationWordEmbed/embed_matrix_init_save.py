@@ -26,8 +26,8 @@ parser.add_argument('--model_config', default="./config_llama2/", type=str)
 parser.add_argument('--model_path', default="./model_llama2/", type=str)
 parser.add_argument('--save_model_config', default="./config_indicLLma_IR_wikitionary_correct", type=str)
 parser.add_argument('--save_model_path', default="./model_indicllama_IR_wikitionary_correct/", type=str)
-parser.add_argument('--wechsel_emb_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel_dict_eikitionary.pt", type=str)
-parser.add_argument('--wechsel_lmhead_path', default="/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/trained_fasttext/embed/indicllama_lmhead_128k_wechsel_dict_wikitionary.pt", type=str)
+parser.add_argument('--wechsel_emb_path', default="/nandini/vocab_adap/trained_fasttext/embed/indicllama_128k_wechsel_dict_eikitionary.pt", type=str)
+parser.add_argument('--wechsel_lmhead_path', default="/nandini/vocab_adap/trained_fasttext/embed/indicllama_lmhead_128k_wechsel_dict_wikitionary.pt", type=str)
 
 
 
