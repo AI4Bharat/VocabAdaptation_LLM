@@ -125,9 +125,7 @@ def main(args):
         stop_id_sequences=None,
     )
     # remove unnecessary space
-    # print(outputs)
     outputs = [output.strip() for output in outputs]
-    # exit()
     with open(os.path.join(args.save_dir, f"xlsum_{args.lang}_predictions.jsonl"), "w") as fout:
         for example, output in zip(test_data, outputs):
             example["prediction_text"] = output
