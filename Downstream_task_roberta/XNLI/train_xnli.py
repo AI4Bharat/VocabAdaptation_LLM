@@ -89,7 +89,7 @@ wandb.log({"no_of_parameter": pytorch_total_params})
 
 training_args = TrainingArguments(
     f"./data-3/nandini/mlm_downstream_checkpoint/xnli_checkpoint_train/{parent_dir}/{child_dir}",
-    # f"./data-3/nandini/mlm_downstream_checkpoint/xnli_checkpoint_train/callbacks_xnli_roberta_{args.folder_init}_{run_name}",
+   
     learning_rate=args.learning_rate,
     per_device_train_batch_size=args.batch_size,
     per_device_eval_batch_size=args.batch_size,
