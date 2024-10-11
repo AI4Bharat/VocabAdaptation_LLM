@@ -7,7 +7,7 @@ import argparse
 import re
 parser = argparse.ArgumentParser()
 parser.add_argument('--llama_tokenizer_dir', default="llama_fast_tokenizer", type=str)
-parser.add_argument('--indic_sp_model_file', default='/nlsasfs/home/ai4bharat/nandinim/nandini/vocab_adap/sp_indic.model', type=str)
+parser.add_argument('--indic_sp_model_file', default='/nandini/vocab_adap/sp_indic.model', type=str)
 args = parser.parse_args()
 
 llama_tokenizer_dir = args.llama_tokenizer_dir
