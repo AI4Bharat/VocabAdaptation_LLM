@@ -268,14 +268,7 @@ def main():
     child_dir = os.path.basename(path_dir)
     parent_path = os.path.dirname(path_dir)
     parent_dir = os.path.basename(parent_path)
-    # parts = path_dir.split(os.sep)
-    # desired_parts = parts[-3:]
-    # parent_parent_dir = desired_parts[0]
-    # parent_dir = desired_parts[1]
-    # child_dir = desired_parts[2]
-    # run_name = f"{parent_parent_dir}_{parent_dir}_{child_dir}"
-
-
+    
     run_name = f"{parent_dir}_{child_dir}"
     wandb.init(project="QA_Roberta", entity="nandinimundra", name = f"{run_name}") #id = "k70nl6bm", resume = "allow"
 
