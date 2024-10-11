@@ -8,10 +8,6 @@ count = 0
 with open("tmp_dir_sentecepiece/merges.txt", 'r', encoding='utf-8') as file:
     for line in file.readlines():
         words = line.split()
-        # print(words, " count is: ", count)
-        # if words[1] == "''" or words[0] == "''":
-        #     print("in word: ", words)
-        
         if len(words) == 2:
             final_line.append(line)
         count+=1
