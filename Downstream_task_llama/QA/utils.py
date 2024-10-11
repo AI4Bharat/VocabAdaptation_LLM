@@ -8,10 +8,6 @@ from importlib import import_module
 from transformers import StoppingCriteria
 
 from finetune import encode_with_prompt_completion_format
-# from eval.dispatch_openai_requests import (
-#     dispatch_openai_chat_requesets,
-#     dispatch_openai_prompt_requesets,
-# )
 
 
 class KeyWordsCriteria(StoppingCriteria):
@@ -111,12 +107,6 @@ def generate_completions(
             batch_generations = [""] * len(batch_prompts) * num_return_sequences
 
         generations += batch_generations
-
-        # for prompt, generation in zip(batch_prompts, batch_generations):
-        #     print("========")
-        #     print(prompt)
-        #     print("--------")
-        #     print(generation)
 
         if not disable_tqdm:
             progress.update(len(batch_prompts) // num_return_sequences)
