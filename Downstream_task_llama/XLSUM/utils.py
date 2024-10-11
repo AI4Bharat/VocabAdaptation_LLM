@@ -112,12 +112,6 @@ def generate_completions(
 
         generations += batch_generations
 
-        # for prompt, generation in zip(batch_prompts, batch_generations):
-        #     print("========")
-        #     print(prompt)
-        #     print("--------")
-        #     print(generation)
-
         if not disable_tqdm:
             progress.update(len(batch_prompts) // num_return_sequences)
 
